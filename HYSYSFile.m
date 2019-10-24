@@ -21,7 +21,7 @@ classdef HYSYSFile
             "solvent_flowrate", 15 ...
             );
         output_fields = ["co2_recovery"];
-        objective = @(x, mean_x, std_x, model) x(1);  % Minimise reboiler duty
+        objective = @(x) x(1);                 % Minimise reboiler duty
         linear_con_A = [];                     % Linear inequality constraints LHS (Ax = b)
         linear_con_b = [];                     % Linear inequality constraints LHS
         lineq_con_A = [];                      % Linear equality constraints LHS
@@ -63,7 +63,7 @@ classdef HYSYSFile
         end
         
         function recovery = co2_fn(~, x, mean_x, std_x, mean_y, std_y, model)
-            predicted = predict(model, (x - mean_x ./ std_x)) .* std_y + mean_y;
+            predicted = predict(model, (x - mean_x) ./ std_x) .* std_y + mean_y;
             recovery = 0.99 - predicted(1);
         end
         
