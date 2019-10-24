@@ -1,8 +1,8 @@
 classdef Pointer
     properties
-        feasible_point  % Feasible point (struct)
-        delta           % Delta of point (struct)
-        current_point   % Current point  (struct)
+        feasible_point  % Feasible point matrix
+        delta           % Delta of point matrix
+        current_point   % Current point matrix
         dimension       % Dimensions of feasible point
     end
     properties (Constant)
@@ -13,11 +13,16 @@ classdef Pointer
             obj.feasible_point = feasible_point;
             obj.delta = delta;
             obj.current_point = feasible_point;
-            obj.dimension = length(fields(obj.current_point));
+            obj.dimension = length(feasible_point);
         end
         
         function normaliser(obj)
             % Normalise delta/dataset
+        end
+        
+        function update(obj, current, delta_)
+            obj.current_point = current;
+            obj.delta = delta_;
         end
         
         function samples = random_sampling(obj, varargin)
@@ -30,25 +35,17 @@ classdef Pointer
             addOptional(p, 'n', obj.n_default, validScalarPosNum);
             parse(p, varargin{:});
             
-            samples = struct();
-            field = fields(obj.current_point);
+            samples = zeros(p.Results.n + 1, obj.dimension);
             
             % Include current point
-            for col = 1:obj.dimension
-                samples(1).(field{col}) = obj.current_point.(field{col});
-            end
+            samples(1, :) = obj.current_point;
             
             % Random sampling within delta
             for point = 2:p.Results.n+1  % Leave a space for current point
                 u = -1 + 2 * rand(1, obj.dimension);
                 norm = (sum(u.^2))^0.5;
                 r = rand(1, 1)^(1 / obj.dimension);
-                for col = 1:obj.dimension
-                    samples(point).(field{col}) = ( ...
-                    obj.delta.(field{col}) * u(col) * r / norm ...
-                    + obj.current_point.(field{col}) ...  % shift by current point
-                    );
-                end
+                samples(point, :) = obj.delta .* u * r / norm + obj.current_point;
             end
         end
     end
