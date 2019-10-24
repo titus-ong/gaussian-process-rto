@@ -24,11 +24,13 @@ classdef HYSYSFile
         end
         
         function value = get_param(obj, parameter)
+            % Get parameter from HYSYS spreadsheet
             ref = obj.cells.(parameter);
             value = obj.spreadsheet.Cell(ref).CellValue;
         end
         
         function set_param(obj, parameter, value)
+            % Set parameter on HYSYS spreadsheet
             ref = obj.cells.(parameter);
             obj.spreadsheet.Cell(ref).CellValue = value;
         end
@@ -41,15 +43,16 @@ classdef HYSYSFile
             obj.solver.CanSolve = 1;
         end
         
-        function outputs = get_output(obj, sample_points, output_fields)
+        function outputs = get_output(obj, inputs, output_fields)
+            % Get output values from HYSYS spreadsheet using given inputs
             outputs = struct();
-            for point = 1:length(sample_points)
+            for point = 1:length(inputs)
                 obj.stop_solver();
                 
                 % Set parameters
-                field = fields(sample_points);
+                field = fields(inputs);
                 for idx = 1:length(field)
-                    obj.set_param(field{idx}, sample_points(point).(field{idx}));
+                    obj.set_param(field{idx}, inputs(point).(field{idx}));
                 end
                 
                 obj.start_solver();
