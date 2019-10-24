@@ -12,6 +12,15 @@ classdef HYSYSFile
             'reboiler_duty', 'C3', ...
             'co2_recovery', 'C4' ...
             );           % Cell struct of spreadsheet
+        feasible_point = struct( ...
+            "reboiler_duty", 250, ...
+            "solvent_flowrate", 170000 ...
+            );
+        delta = struct( ...  % 10% of operating range
+            "reboiler_duty", 15, ...
+            "solvent_flowrate", 300 ...
+            );
+        output_fields = ["co2_recovery"];
     end
     methods
         function obj = HYSYSFile(filepath, spreadsheet_name) % Constructor method
@@ -43,7 +52,7 @@ classdef HYSYSFile
             obj.solver.CanSolve = 1;
         end
         
-        function outputs = get_output(obj, inputs, output_fields)
+        function outputs = get_output(obj, inputs)
             % Get output values from HYSYS spreadsheet using given inputs
             outputs = struct();
             for point = 1:length(inputs)
@@ -58,8 +67,8 @@ classdef HYSYSFile
                 obj.start_solver();
                 
                 % Get parameters
-                for idx = 1:length(output_fields)
-                    outputs(point).(output_fields{idx}) = obj.get_param(output_fields{idx});
+                for idx = 1:length(obj.output_fields)
+                    outputs(point).(obj.output_fields{idx}) = obj.get_param(obj.output_fields{idx});
                 end
             end
         end
