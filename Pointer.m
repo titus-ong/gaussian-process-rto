@@ -2,9 +2,7 @@ classdef Pointer
     properties
         feasible_point  % Feasible point (struct)
         delta           % Delta of point (struct)
-        delta_values    % Delta of point (matrix)
         current_point   % Current point  (struct)
-        current_values  % Current point  (matrix)
         dimension       % Dimensions of feasible point
     end
     properties (Constant)
@@ -16,12 +14,10 @@ classdef Pointer
             obj.delta = delta;
             obj.current_point = feasible_point;
             obj.dimension = length(fields(obj.current_point));
-            obj.delta_values = zeros(1, obj.dimension);
-            obj.current_values = zeros(1, obj.dimension);
         end
         
         function normaliser(obj)
-            % do something to obj.feasible_point?
+            % Normalise delta/dataset
         end
         
         function samples = random_sampling(obj, varargin)
