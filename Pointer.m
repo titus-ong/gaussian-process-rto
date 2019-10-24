@@ -20,7 +20,7 @@ classdef Pointer
             % Normalise delta/dataset
         end
         
-        function update(obj, current, delta_)
+        function obj = update(obj, current, delta_)
             obj.current_point = current;
             obj.delta = delta_;
         end
