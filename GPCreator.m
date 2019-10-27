@@ -124,14 +124,12 @@ classdef GPCreator  < handle
                 % True values
                 % Use objective method for true because we don't want to have model inputs
                 true_curr = obj.objective_true(obj.opt_min(i, :));
+                true_last = obj.objective_true(obj.centre(i-1, :));
                 
                 % Train new GP
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
                 obj.training_output = [obj.training_output; true_curr];
                 obj.update_model();
-                
-                % If true current point violates system constraints,
-                % set centre to previous centre and reduce delta.
                 
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
@@ -142,23 +140,26 @@ classdef GPCreator  < handle
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
-                switch obj.rho(i)
-                    case obj.rho(i) < obj.eta_low
-                        obj.centre(i, :) = obj.centre(i - 1, :);
-                        obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
-                    case obj.rho(i) < obj.eta_high
-                        obj.centre(i, :) = obj.opt_min(i, :);
-                        obj.delta(i, :) = obj.delta(i - 1, :);
-                    case obj.rho(i) >= obj.eta_high
-                        obj.centre(i, :) = obj.opt_min(i, :);
-                        obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
-                    otherwise
-                        error("Rho is NaN");
+                if obj.system_violation(true_curr)
+                    % Current point violates system constraints
+                    obj.centre(i, :) = obj.centre(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.rho(i) = NaN;
+                elseif obj.rho(i) < obj.eta_low
+                    obj.centre(i, :) = obj.centre(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                elseif obj.rho(i) < obj.eta_high
+                    obj.centre(i, :) = obj.opt_min(i, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :);
+                elseif obj.rho(i) >= obj.eta_high
+                    obj.centre(i, :) = obj.opt_min(i, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
+                else
+                    error("Rho could not be calculated");
                 end
                     
                 % Update values
                 pointer.update(obj.centre(i, :), obj.delta(i, :));
-                true_last = obj.objective_true(obj.centre(i, :));
             end
         end
         
