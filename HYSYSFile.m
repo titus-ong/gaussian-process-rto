@@ -98,7 +98,7 @@ classdef HYSYSFile  < handle
         
         function objective = true_obj_fn(obj, x)
             % Calculate objective function for system
-            [~, outputs] = obj.get_output(x);
+            [outputs, ~] = obj.get_output(x);
             objective = obj.calc_objective(outputs);
         end
         
@@ -127,9 +127,9 @@ classdef HYSYSFile  < handle
             obj.solver.CanSolve = 1;
         end
         
-        function [outputs, outputs_mat] = get_output(obj, inputs)
+        function [outputs, outputs_struct] = get_output(obj, inputs)
             % Get output values from HYSYS spreadsheet using given inputs
-            outputs = struct();
+            outputs_struct = struct();
             for point = 1:size(inputs, 1)
                 obj.stop_solver();
                 
@@ -143,12 +143,12 @@ classdef HYSYSFile  < handle
                 
                 % Get parameters
                 for idx = 1:length(obj.output_fields)
-                    outputs(point).(obj.output_fields{idx}) = obj.get_param(obj.output_fields{idx});
+                    outputs_struct(point).(obj.output_fields{idx}) = obj.get_param(obj.output_fields{idx});
                 end
             end
-            outputs_mat = squeeze(cell2mat(struct2cell(outputs)));
-            if size(outputs_mat, 2) ~= length(obj.output_fields)
-                outputs_mat = outputs_mat';
+            outputs = squeeze(cell2mat(struct2cell(outputs_struct)));
+            if size(outputs, 2) ~= length(obj.output_fields)
+                outputs = outputs';
             end
         end
     end

@@ -7,12 +7,14 @@ toc
 %% Initialising Points for Training
 pointer = Pointer(hysys.feasible_point_mat, hysys.delta_mat);
 sample_points = pointer.random_sampling(10);
-[outputs, outputs_mat] = hysys.get_output(sample_points);
+toc
+[outputs, outputs_struct] = hysys.get_output(sample_points);
 toc
 
-GP = GPCreator(hysys, sample_points, outputs_mat);
+GP = GPCreator(hysys, sample_points, outputs);
+toc
 
 %% Optimisation
-iter = 15;
+iter = 2;
 GP.optimise(iter);
-GP.plot();
+% GP.plot();
