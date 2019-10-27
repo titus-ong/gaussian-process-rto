@@ -82,16 +82,17 @@ classdef GPCreator
         
         function optimise(obj, iter)
             % Pre-allocation
-            columns_in = length(obj.centre);
+            cols = length(obj.centre);
             rows = size(obj.centre, 1);
-            obj.centre = [obj.centre; zeros(iter, columns_in)];
-            obj.delta = [obj.delta; zeros(iter, columns_in)];
+            obj.centre = [obj.centre; zeros(iter, cols)];
+            obj.delta = [obj.delta; zeros(iter, cols)];
             obj.fval_min = [obj.fval_min; zeros(iter, 1)];
-            obj.opt_min = [obj.opt_min; zeros(iter, columns_in)];
+            obj.opt_min = [obj.opt_min; zeros(iter, cols)];
             obj.rho = [obj.rho; zeros(iter, 1)];
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
+            true_last = obj.objective(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
                 % Update nonlinear constraints with current iteration data
@@ -121,7 +122,6 @@ classdef GPCreator
                 % True values
                 % Use objective method for true because we don't want to have model inputs
                 true_curr = obj.objective(obj.opt_min(i, :));
-                true_last = obj.objective(obj.centre(i-1, :));
             
                 % MAKE SURE CONSTRAINTS AREN'T VIOLATED IN REAL SYSTEM - how?
                 % Need to create another function in HYSYSFile to check if
@@ -153,7 +153,9 @@ classdef GPCreator
                         obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
                 end
                     
+                % Update values
                 pointer.update(obj.centre(i, :), obj.delta(i, :));
+                true_last = true_curr;
             end
         end
         
