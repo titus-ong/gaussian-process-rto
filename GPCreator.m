@@ -1,7 +1,8 @@
-classdef GPCreator
+classdef GPCreator  < handle
     properties
         system                  % Either HYSYSFile or system object
-        objective               % System objective function
+        objective_model         % Objective function for model
+        objective_true          % Objective function for system
         obj_fn                  % Objective function with model inputs
         linear_con_A            % System linear inequality constraints LHS (Ax = b)
         linear_con_b            % System linear inequality constraints RHS
@@ -39,7 +40,8 @@ classdef GPCreator
     methods
         function obj = GPCreator(system, training_input, training_output)
             obj.system = system;
-            obj.objective = system.objective;
+            obj.objective_model = system.objective_model;
+            obj.objective_true = system.objective_true;
             obj.linear_con_A = system.linear_con_A;
             obj.linear_con_b = system.linear_con_b;
             obj.lineq_con_A = system.lineq_con_A;
@@ -74,7 +76,7 @@ classdef GPCreator
             obj.model = fitrgp(obj.norm_input, obj.norm_output);
             
             % Update objective function with current iteration data
-            obj.obj_fn = @(x) obj.objective( ...
+            obj.obj_fn = @(x) obj.objective_model( ...
                 x, obj.model, obj.mean_input, obj.std_input, ...
                 obj.mean_output, obj.std_output ...
             );
@@ -92,7 +94,7 @@ classdef GPCreator
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
-            true_last = obj.objective(obj.centre(rows, :));
+            true_last = obj.objective_true(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
                 % Update nonlinear constraints with current iteration data
@@ -121,7 +123,7 @@ classdef GPCreator
                 
                 % True values
                 % Use objective method for true because we don't want to have model inputs
-                true_curr = obj.objective(obj.opt_min(i, :));
+                true_curr = obj.objective_true(obj.opt_min(i, :));
             
                 % MAKE SURE CONSTRAINTS AREN'T VIOLATED IN REAL SYSTEM - how?
                 % Need to create another function in HYSYSFile to check if
