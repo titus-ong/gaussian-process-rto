@@ -1,4 +1,4 @@
-classdef HYSYSFile
+classdef HYSYSFile  < handle
     properties (SetAccess=private)
         simulation                                 % Simulation object
         flowsheet                                  % Simulation flowsheet
@@ -52,7 +52,8 @@ classdef HYSYSFile
         feasible_point_mat                     % Matrix form
         delta_mat                              % Matrix form
         nonlin_con                             % Nonlinear constraints
-        objective                              % Minimise reboiler duty
+        objective_model                        % Objective function for model
+        objective_true                         % Objective function for system
     end
     methods
         function obj = HYSYSFile(filepath, spreadsheet_name) % Constructor method
@@ -67,36 +68,43 @@ classdef HYSYSFile
             obj.delta_mat = cell2mat(struct2cell(obj.delta))';
             obj.nonlin_con = @(x, centre, delta, model, mean_x, std_x, mean_y, std_y) ...
                 obj.nonlin_fn(x, centre, delta, model, mean_x, std_x, mean_y, std_y);
-            obj.objective = @(x, model, mean_x, std_x, mean_y, std_y) ...
-                obj.obj_fn(x, model, mean_x, std_x, mean_y, std_y);
+            obj.objective_model = @(x, model, mean_x, std_x, mean_y, std_y) ...
+                obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
+            obj.objective_true = @(x) obj.true_obj_fn(x);
         end
         
-        function [c,ceq] = nonlin_fn(obj, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
+        function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
             
             % Point is within delta
             c(1) = sum((x - centre).^2) - sum((delta).^2);
             
-            % CO2 recovery > 0.99
+            % CO2 recovery > 99
+            function recovery = co2_fn(x, model, mean_x, std_x, mean_y, std_y)
+                predicted = predict(model, (x - mean_x) ./ std_x) .* std_y + mean_y;
+                recovery = predicted(1) - 1;  % Replace (1) to find co2 recovery according to output field
+            end
             % TO BE ADDED WHEN CO2 WORKS IN HYSYS
-            c(2) = obj.co2_fn(x, model, mean_x, std_x, mean_y, std_y);
+            c(2) = co2_fn(x, model, mean_x, std_x, mean_y, std_y);
             
             ceq = [];
         end
         
-        function recovery = co2_fn(~, x, model, mean_x, std_x, mean_y, std_y)
-            predicted = predict(model, (x - mean_x) ./ std_x) .* std_y + mean_y;
-            recovery = predicted(1) - 1;  % Replace (1) to find co2 recovery according to output field
+        function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
+            % Calculate objective function for model
+            outputs = predict(model, (x - mean_x) ./ std_x) .* std_y + mean_y;
+            objective = obj.calc_objective(outputs);
         end
         
-        function objective = obj_fn(~, x, model, mean_x, std_x, mean_y, std_y)
-            switch nargin
-                case 2  % True objective - no model inputs
-                    [~, outputs] = obj.get_output(x);
-                otherwise  % Model objective
-                    outputs = predict(model, (x - mean_x) ./ std_x) .* std_y + mean_y;
-            end
-            objective = outputs(1);  % Change (1) according to objective required
+        function objective = true_obj_fn(obj, x)
+            % Calculate objective function for system
+            [~, outputs] = obj.get_output(x);
+            objective = obj.calc_objective(outputs);
+        end
+        
+        function objective = calc_objective(~, outputs)
+            % Calculate objective function from outputs
+            objective = outputs(1);
         end
         
         function value = get_param(obj, parameter)
