@@ -150,9 +150,11 @@ classdef GPCreator  < handle
                     case obj.rho(i) < obj.eta_high
                         obj.centre(i, :) = obj.opt_min(i, :);
                         obj.delta(i, :) = obj.delta(i - 1, :);
-                    otherwise
+                    case obj.rho(i) >= obj.eta_high
                         obj.centre(i, :) = obj.opt_min(i, :);
                         obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
+                    otherwise
+                        error("Rho is NaN");
                 end
                     
                 % Update values
