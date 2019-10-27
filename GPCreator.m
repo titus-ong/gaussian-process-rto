@@ -2,6 +2,7 @@ classdef GPCreator
     properties
         system                  % Either HYSYSFile or system object
         objective               % System objective function
+        obj_fn                  % Objective function with model inputs
         linear_con_A            % System linear inequality constraints LHS (Ax = b)
         linear_con_b            % System linear inequality constraints RHS
         lineq_con_A             % System linear equality constraints LHS
@@ -71,20 +72,25 @@ classdef GPCreator
             
             % Initialise GP model
             obj.model = fitrgp(obj.norm_input, obj.norm_output);
+            
+            % Update objective function with current iteration data
+            obj.obj_fn = @(x) obj.objective( ...
+                x, obj.model, obj.mean_input, obj.std_input, ...
+                obj.mean_output, obj.std_output ...
+            );
         end
         
         function optimise(obj, iter)
             % Pre-allocation
-            columns = length(obj.output_fields);
+            columns_in = length(obj.centre);
             rows = size(obj.centre, 1);
-            obj.centre = [obj.centre; zeros(iter, columns)];
-            obj.delta = [obj.delta; zeros(iter, columns)];
+            obj.centre = [obj.centre; zeros(iter, columns_in)];
+            obj.delta = [obj.delta; zeros(iter, columns_in)];
             obj.fval_min = [obj.fval_min; zeros(iter, 1)];
-            obj.opt_min = [obj.opt_min; zeros(iter, columns)];
+            obj.opt_min = [obj.opt_min; zeros(iter, columns_in)];
             obj.rho = [obj.rho; zeros(iter, 1)];
             
             % Initialise
-            [~, output_true_last] = obj.system.get_output(obj.centre(rows, :));
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
             
             for i = rows+1:rows+iter
@@ -101,7 +107,7 @@ classdef GPCreator
                 fvals = zeros(dim(1), 1);
                 for each = 1:dim(1)
                     [opt, fval] = fmincon( ...
-                        obj.objective, starting_pts(each, :), obj.linear_con_A, ...
+                        obj.obj_fn, starting_pts(each, :), obj.linear_con_A, ...
                         obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
                         obj.lb, obj.ub, nonlincon, obj.options);
                     opt_points(each, :) = opt;
@@ -112,15 +118,27 @@ classdef GPCreator
                 [obj.fval_min(i), idx] = min(fvals);
                 obj.opt_min(i, :) = opt_points(idx, :);
                 
+                % True values
+                % Use objective method for true because we don't want to have model inputs
+                true_curr = obj.objective(obj.opt_min(i, :));
+                true_last = obj.objective(obj.centre(i-1, :));
+            
+                % MAKE SURE CONSTRAINTS AREN'T VIOLATED IN REAL SYSTEM - how?
+                % Need to create another function in HYSYSFile to check if
+                % new point violates any true constraints
+                
+                % Train new GP
+                obj.training_input = [obj.training_input; obj.opt_min(i, :)];
+                obj.training_output = [obj.training_output; true_curr];
+                obj.update_model();
+                
+                % Predicted values
+                predicted_curr = obj.obj_fn(obj.opt_min(i, :));
+                predicted_last = obj.obj_fn(obj.centre(i-1, :));
+                
                 % Rho calculation
-                [~, output_true_curr] = obj.system.get_output(obj.opt_min(i, :));
-                output_pred_last = predict( ...
-                    obj.model, (obj.centre(i-1, :) - obj.mean_input) ./ obj.std_input);
-                output_pred_curr = predict( ...
-                    obj.model, (obj.opt_min(i, :) - obj.mean_input) ./ obj.std_input);
                 obj.rho(i) = ( ...
-                    (obj.objective(output_true_curr) - obj.objective(output_true_last)) / ...
-                    (obj.objective(output_pred_curr) - obj.objective(output_pred_last)) ...
+                    (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
                 switch obj.rho(i)
@@ -136,14 +154,12 @@ classdef GPCreator
                 end
                     
                 pointer.update(obj.centre(i, :), obj.delta(i, :));
-                obj.training_input = [obj.training_input; obj.opt_min(i, :)];
-                obj.training_output = [obj.training_output; output_true_curr];
-                obj.update_model();
             end
         end
         
         function plot(obj)
-            
+            % Plot centre moving against objective function
+            % Plot delta around centres
         end
     end
 end
