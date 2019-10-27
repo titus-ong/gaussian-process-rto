@@ -1,4 +1,4 @@
-classdef Pointer
+classdef Pointer  < handle
     properties
         feasible_point  % Feasible point matrix
         delta           % Delta of point matrix
