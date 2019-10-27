@@ -54,6 +54,7 @@ classdef HYSYSFile  < handle
         nonlin_con                             % Nonlinear constraints
         objective_model                        % Objective function for model
         objective_true                         % Objective function for system
+        system_violation                       % Test for system constraint violation
     end
     methods
         function obj = HYSYSFile(filepath, spreadsheet_name) % Constructor method
@@ -71,6 +72,7 @@ classdef HYSYSFile  < handle
             obj.objective_model = @(x, model, mean_x, std_x, mean_y, std_y) ...
                 obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
             obj.objective_true = @(x) obj.true_obj_fn(x);
+            obj.system_violation = @(y) obj.system_violated(y);
         end
         
         function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
@@ -90,7 +92,7 @@ classdef HYSYSFile  < handle
             ceq = [];
         end
         
-        function bool = system_violation(obj, output)
+        function bool = system_violated(obj, output)
             % Test if output violates system constraints
             % Return true if violated, false if not
             bool = false;
