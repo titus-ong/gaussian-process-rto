@@ -35,18 +35,18 @@ classdef HYSYSFile  < handle
             "reboiler_duty", 154400, ...
             "solvent_flowrate", 250 ...
             );
-        delta = struct( ...                    % 10% of operating range
+        delta = struct( ...                        % 10% of operating range
             "reboiler_duty", 300, ...
             "solvent_flowrate", 15 ...
             );
         output_fields = ["objective_true"];
-        linear_con_A = [];                     % Linear inequality constraints LHS (Ax = b)
-        linear_con_b = [];                     % Linear inequality constraints LHS
-        lineq_con_A = [];                      % Linear equality constraints LHS
-        lineq_con_b = [];                      % Linear equality constraints LHS
-        lb = [150000, 150];                    % Lower bounds
-        ub = [200000, 300];                    % Upper bounds
-        options = optimset('disp','iter');     % Options for GP
+        linear_con_A = [];                         % Linear inequality constraints LHS (Ax = b)
+        linear_con_b = [];                         % Linear inequality constraints LHS
+        lineq_con_A = [];                          % Linear equality constraints LHS
+        lineq_con_b = [];                          % Linear equality constraints LHS
+        lb = [150000, 150];                        % Lower bounds
+        ub = [200000, 300];                        % Upper bounds
+        options = optimset('disp','iter');         % Options for GP
     end
     properties
         feasible_point_mat                     % Matrix form
@@ -88,6 +88,12 @@ classdef HYSYSFile  < handle
             c(2) = co2_fn(x, model, mean_x, std_x, mean_y, std_y);
             
             ceq = [];
+        end
+        
+        function bool = system_violation(obj, output)
+            % Test if output violates system constraints
+            % Return true if violated, false if not
+            bool = false;
         end
         
         function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
