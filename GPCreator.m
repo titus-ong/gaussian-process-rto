@@ -124,15 +124,14 @@ classdef GPCreator  < handle
                 % True values
                 % Use objective method for true because we don't want to have model inputs
                 true_curr = obj.objective_true(obj.opt_min(i, :));
-            
-                % MAKE SURE CONSTRAINTS AREN'T VIOLATED IN REAL SYSTEM - how?
-                % Need to create another function in HYSYSFile to check if
-                % new point violates any true constraints
                 
                 % Train new GP
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
                 obj.training_output = [obj.training_output; true_curr];
                 obj.update_model();
+                
+                % If true current point violates system constraints,
+                % set centre to previous centre and reduce delta.
                 
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
@@ -159,7 +158,7 @@ classdef GPCreator  < handle
                     
                 % Update values
                 pointer.update(obj.centre(i, :), obj.delta(i, :));
-                true_last = true_curr;
+                true_last = obj.objective_true(obj.centre(i, :));
             end
         end
         
