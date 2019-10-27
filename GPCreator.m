@@ -12,6 +12,7 @@ classdef GPCreator  < handle
         ub                      % System upper bounds
         nonlin_con              % System nonlinear constraints
         options                 % System options for GP
+        system_violation        % Test for true violation of system constraints
         output_fields           % System field names for outputs
         model                   % GP model
         
@@ -50,6 +51,7 @@ classdef GPCreator  < handle
             obj.ub = system.ub;
             obj.nonlin_con = system.nonlin_con;
             obj.options = system.options;
+            obj.system_violation = system.system_violation;
             obj.output_fields = system.output_fields;
             
             obj.training_input = training_input;
