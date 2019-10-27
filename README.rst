@@ -17,6 +17,7 @@ MATLAB:
 - Add plotting function for GPCreator
 - Add Williams-Otto file for fast testing
 - Add forgetting factor
+- Add function to test for system violation
 
 HYSYS:
 
