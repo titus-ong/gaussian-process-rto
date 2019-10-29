@@ -58,7 +58,7 @@ classdef GPCreator  < handle
             obj.training_output = training_output;
             obj.delta = system.delta_mat;
             obj.centre = obj.training_input(1, :);
-            obj.fval_min(1) = obj.training_output(1, :);
+            obj.fval_min(1) = 0;
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
             
@@ -75,7 +75,9 @@ classdef GPCreator  < handle
             obj.norm_output = normalize(obj.training_output);
             
             % Initialise GP model
-            obj.model = fitrgp(obj.norm_input, obj.norm_output);
+            for i = 1:size(obj.training_output, 2)
+                obj.model.(obj.output_fields{i}) = fitrgp(obj.training_input, obj.training_output(:, i));
+            end
             
             % Update objective function with current iteration data
             obj.obj_fn = @(x) obj.objective_model( ...
