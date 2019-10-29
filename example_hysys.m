@@ -1,7 +1,12 @@
+%% User name variables
+hysys_name = "\testing.hsc";
+spreadsheet_input = "Inputs";
+spreadsheet_output = "Outputs";
+
 %% Connect to HYSYS
 tic
-hysys_path = pwd + "\testing.hsc";
-hysys = HYSYSFile(hysys_path, "SPRDSHT-1");
+hysys_path = pwd + hysys_name;
+hysys = HYSYSFile(hysys_path, spreadsheet_input, spreadsheet_output);
 toc
 
 %% Initialising Points for Training
