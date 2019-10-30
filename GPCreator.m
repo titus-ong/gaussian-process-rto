@@ -158,8 +158,9 @@ classdef GPCreator  < handle
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
-                else
-                    error("Rho could not be calculated");
+                else  % Rho calculated is NaN
+                    obj.centre(i, :) = obj.centre(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                 end
                     
                 % Update values
@@ -188,10 +189,24 @@ classdef GPCreator  < handle
                 h = points(i, 2);
                 k = points(i, 1);
                 ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
-                fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)]);
+                fimplicit(ellipse, [obj.lb(2) obj.ub(2) obj.lb(1) obj.ub(1)]);
                 hold on;
             end
             plot(points(:, 2), points(:, 1));
+            x1 = linspace(obj.lb(2), obj.ub(2), 10);
+            y1 = linspace(obj.lb(1), obj.ub(1), 10);
+            fvals = zeros(10, 10);
+            co2 = zeros(10, 10);
+            for i = 1:10
+                for j = 1:10
+                    fvals(j, i) = obj.obj_fn([y1(i), x1(j)]);
+                    co2(j, i) = predict(obj.model.clean_gas_co2, [y1(i), x1(j)]);
+                end
+            end
+            figure;
+            hold on;
+            surf(x1, y1, fvals);
+%             surf(x1, y1, co2);
         end
     end
 end
