@@ -98,7 +98,6 @@ classdef GPCreator  < handle
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
-            true_last = obj.objective_true(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
                 % Update nonlinear constraints with current iteration data
