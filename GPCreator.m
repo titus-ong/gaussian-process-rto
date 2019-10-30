@@ -131,8 +131,9 @@ classdef GPCreator  < handle
                 true_last = obj.objective_true(obj.centre(i-1, :));
                 
                 % Train new GP
+                [new_output, ~] = obj.system.get_output(obj.opt_min(i, :));
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
-                obj.training_output = [obj.training_output; true_curr];
+                obj.training_output = [obj.training_output; new_output];
                 obj.update_model();
                 
                 % Predicted values
