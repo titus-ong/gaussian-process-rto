@@ -88,7 +88,7 @@ classdef GPCreator  < handle
         
         function optimise(obj, iter)
             % Pre-allocation
-            cols = length(obj.centre);
+            cols = size(obj.centre, 2);
             rows = size(obj.centre, 1);
             obj.centre = [obj.centre; zeros(iter, cols)];
             obj.delta = [obj.delta; zeros(iter, cols)];
@@ -170,6 +170,28 @@ classdef GPCreator  < handle
         function plot(obj)
             % Plot centre moving against objective function
             % Plot delta around centres
+            if size(obj.centre, 2)==2
+                obj.plot2d_indiv(size(obj.centre, 1));
+            end
+        end
+        
+        function plot2d_indiv(obj, idx)
+            f = figure;
+            hold on;
+            points = zeros(idx, size(obj.centre, 2));
+            deltas = zeros(idx, size(obj.centre, 2));
+            syms x y a b h k
+            for i = 1:idx
+                points(i, :) = obj.centre(i, :);
+                a = obj.delta(i, 2);
+                b = obj.delta(i, 1);
+                h = points(i, 2);
+                k = points(i, 1);
+                ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
+                fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)]);
+                hold on;
+            end
+            plot(points(:, 2), points(:, 1));
         end
     end
 end
