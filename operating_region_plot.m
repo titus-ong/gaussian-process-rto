@@ -13,7 +13,7 @@ data_grid = readmatrix(pwd + excel);
 figure
 hold on;
 contour(x1, y1, z1)  % Use surf to see 3D plot
-contour(x2, y2, z2)  % To draw 0.003 CO2% contour
+contour(x2, y2, z2, [0.003 0.003])  % To draw 0.003 CO2% contour
 
 function [x, y, z] = plot_columns(data_grid, rows, cols, column)
 z = zeros(rows, cols);
