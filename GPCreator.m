@@ -172,17 +172,19 @@ classdef GPCreator  < handle
             % Plot centre moving against objective function
             % Plot delta around centres
             if size(obj.centre, 2)==2
-                obj.plot2d_indiv(size(obj.centre, 1));
+                obj.plot2d_indiv();
             end
         end
         
-        function plot2d_indiv(obj, idx)
+        function plot2d_indiv(obj)
             f = figure;
             hold on;
-            points = zeros(idx, size(obj.centre, 2));
-            deltas = zeros(idx, size(obj.centre, 2));
+            
+            idx = size(obj.centre, 1);
+            points = zeros(idx, 2);
+            deltas = zeros(idx, 2);
             syms x y a b h k
-            for i = 1:idx
+            for i = 1:size(obj.centre, 1)
                 points(i, :) = obj.centre(i, :);
                 a = obj.delta(i, 2);
                 b = obj.delta(i, 1);
@@ -193,19 +195,19 @@ classdef GPCreator  < handle
                 hold on;
             end
             plot(points(:, 2), points(:, 1));
-            x1 = linspace(obj.lb(2), obj.ub(2), 10);
-            y1 = linspace(obj.lb(1), obj.ub(1), 10);
-            fvals = zeros(10, 10);
-            co2 = zeros(10, 10);
-            for i = 1:10
-                for j = 1:10
-                    fvals(j, i) = obj.obj_fn([y1(i), x1(j)]);
-                    co2(j, i) = predict(obj.model.clean_gas_co2, [y1(i), x1(j)]);
-                end
-            end
-            figure;
-            hold on;
-            surf(x1, y1, fvals);
+%             x1 = linspace(obj.lb(2), obj.ub(2), 10);
+%             y1 = linspace(obj.lb(1), obj.ub(1), 10);
+%             fvals = zeros(10, 10);
+%             co2 = zeros(10, 10);
+%             for i = 1:10
+%                 for j = 1:10
+%                     fvals(j, i) = obj.obj_fn([y1(i), x1(j)]);
+%                     co2(j, i) = predict(obj.model.clean_gas_co2, [y1(i), x1(j)]);
+%                 end
+%             end
+%             figure;
+%             hold on;
+%             surf(x1, y1, fvals);
 %             surf(x1, y1, co2);
         end
     end
