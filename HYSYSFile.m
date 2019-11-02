@@ -74,7 +74,7 @@ classdef HYSYSFile  < handle
         lineq_con_b = [];                          % Linear equality constraints LHS
         lb = [80000, 150, 40];                     % Lower bounds
         ub = [200000, 1000, 300];                  % Upper bounds
-        options = optimset('disp','iter');         % Options for GP
+        options = optimset('disp','off');         % Options for GP - iter or off
     end
     properties
         feasible_point_mat                     % Matrix form
