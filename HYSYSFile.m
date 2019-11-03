@@ -112,7 +112,7 @@ classdef HYSYSFile  < handle
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
             
             % Point is within delta
-            c(1) = sum((x - centre).^2) - sum((delta).^2);
+            c(1) = sum((x - centre).^2 ./ delta.^2) - 1;
             
             % Clean [CO2] from absorber
             function percentage = co2_fn(x, model, mean_x, std_x, mean_y, std_y)
