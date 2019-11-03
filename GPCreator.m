@@ -107,7 +107,7 @@ classdef GPCreator  < handle
                 );
                 
                 % Optimise from various starting points
-                starting_pts = pointer.random_sampling();
+                starting_pts = pointer.random_sampling(10);
                 dim = size(starting_pts);
                 opt_points = zeros(dim(1), dim(2));
                 fvals = zeros(dim(1), 1);
