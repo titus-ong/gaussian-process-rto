@@ -60,19 +60,22 @@ classdef WilliamsOtto
         function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
             
+            % Point is within delta
+            c(1) = sum((x - centre).^2) - sum((delta).^2);
+            
             % x_a to be less than 0.12
             function percentage = constraint_x_a(x, model)
                 predicted = predict(model.x_a, x);
                 percentage = predicted - 0.12;
             end
-            c(1) = constraint_x_a(x, model);
+            c(2) = constraint_x_a(x, model);
             
             % x_g to be less than 0.08
             function percentage = constraint_x_g(x, model)
                 predicted = predict(model.x_g, x);
                 percentage = predicted - 0.08;
             end
-            c(2) = constraint_x_g(x, model);
+            c(3) = constraint_x_g(x, model);
 
             ceq = [];
         end
