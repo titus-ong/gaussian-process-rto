@@ -1,12 +1,12 @@
 classdef WilliamsOtto
     properties (Constant)
         feasible_point = struct( ...
-            "flowrate_b", 6, ...
-            "t_reactor", 79 ...
+            "flowrate_b", 6.9, ...
+            "t_reactor", 83 ...
             );
         delta = struct( ...
-            "flowrate_b", 0.12, ...
-            "t_reactor", 0.9 ...
+            "flowrate_b", 0.3, ...
+            "t_reactor", 3 ...
             );
         output_fields = { ...
             'flowrate_out', ...
@@ -28,9 +28,6 @@ classdef WilliamsOtto
     properties
         init_var = struct( ...
             "flowrate_a", 1.8275, ...                % Inlet flowrate of A
-            "x_a_in", 1, ...                       % Inlet concentration of A
-            "x_b_in", 1, ...                       % Inlet concentration of B
-            "volume", 10, ...                      % Reactor volume
             "total_molar_flowrate", 2105.2, ...    % Total molar flowrate
             "flowrate_out", NaN, ...               % Outlet flowrate
             "x_a", 0.2, ...                        % Outlet concentration of A
@@ -83,7 +80,16 @@ classdef WilliamsOtto
         function bool = system_violated(obj, output)
             % Test if output violates system constraints
             % Return true if violated, false if not
-            bool = false;
+            
+            % Logical arrays
+            x_a = (obj.output_fields=="x_a");
+            x_g = (obj.output_fields=="x_g");
+            
+            if output(x_a) > 0.12 || output(x_g) > 0.08
+                bool = true;
+            else
+                bool = false;
+            end
         end
         
         function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
@@ -142,8 +148,9 @@ classdef WilliamsOtto
             
             % Solve reactor
             for point = 1:size(inputs, 1)
-                [x, ~] = fsolve(@obj.system_of_eqns, x0, option, inputs(point, :));
-                x(end + 1) = inputs(flow_b) + obj.init_var.flowrate_a;
+                curr_inputs = inputs(point, :);
+                [x, ~] = fsolve(@obj.system_of_eqns, x0, option, curr_inputs);
+                x(end + 1) = curr_inputs(flow_b) + obj.init_var.flowrate_a;
                 for idx = 1:length(obj.output_fields)
                     field = convertCharsToStrings(obj.output_fields{idx});
                     outputs_struct(point).(obj.output_fields{idx}) = x(x0_fields==field);
@@ -188,8 +195,8 @@ classdef WilliamsOtto
             eqns(2,1) = (inputs(flow_b) - r1 - r2 - flow_total * x_b)/M_total;
             eqns(3,1) = (2 * r1 - 2 * r2 - r3 - flow_total * x_c)/M_total;
             eqns(4,1) = (2 * r2 - flow_total * x_e)/M_total;
-            eqns(5,1) = (1.5*r3 - flow_total * x_g)/M_total;
-            eqns(6,1) = (r2 - 0.5*r3 - flow_total * x_p)/M_total;
+            eqns(5,1) = (1.5 * r3 - flow_total * x_g)/M_total;
+            eqns(6,1) = (r2 - 0.5 * r3 - flow_total * x_p)/M_total;
         end
     end
 end
