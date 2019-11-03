@@ -130,9 +130,9 @@ classdef GPCreator  < handle
                 true_last = obj.objective_true(obj.centre(i-1, :));
                 
                 % Train new GP
-                [new_output, ~] = obj.system.get_output(obj.opt_min(i, :));
+                [true_output, ~] = obj.system.get_output(obj.opt_min(i, :));
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
-                obj.training_output = [obj.training_output; new_output];
+                obj.training_output = [obj.training_output; true_output];
                 obj.update_model();
                 
                 % Predicted values
@@ -144,7 +144,7 @@ classdef GPCreator  < handle
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
-                if obj.system_violation(true_curr)
+                if obj.system_violation(true_output)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
@@ -186,15 +186,15 @@ classdef GPCreator  < handle
             syms x y a b h k
             for i = 1:size(obj.centre, 1)
                 points(i, :) = obj.centre(i, :);
-                a = obj.delta(i, 2);
-                b = obj.delta(i, 1);
-                h = points(i, 2);
-                k = points(i, 1);
+                a = obj.delta(i, 1);
+                b = obj.delta(i, 2);
+                h = points(i, 1);
+                k = points(i, 2);
                 ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
-                fimplicit(ellipse, [obj.lb(2) obj.ub(2) obj.lb(1) obj.ub(1)]);
+                fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)]);
                 hold on;
             end
-            plot(points(:, 2), points(:, 1));
+            plot(points(:, 1), points(:, 2), '-*');
 %             x1 = linspace(obj.lb(2), obj.ub(2), 10);
 %             y1 = linspace(obj.lb(1), obj.ub(1), 10);
 %             fvals = zeros(10, 10);
