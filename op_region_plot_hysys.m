@@ -1,25 +1,40 @@
-excel = "\op_region.xlsx";
-rows = 7;  % No. of intervals of reboiler_duty
-cols = 7;  % No. of intervals of solvent_flowrate
+excel = "\fast run results.xlsx";
+rows = 21;  % No. of intervals of reboiler_duty
+cols = 21;  % No. of intervals of sour_gas
 
 data_grid = readmatrix(pwd + excel);
+x = linspace(40, 300, 21);
+y = linspace(80000, 200000, 21);
 
 % Objective
-[x1, y1, z1] = plot_columns(data_grid, rows, cols, 25);
+z1 = plot_columns(data_grid, rows, cols, 27);
+% Min
+[~,i] = min(z1(:));
+[row,col] = ind2sub(size(z1), i);
 
 % CO2% in clean gas
-[x2, y2, z2] = plot_columns(data_grid, rows, cols, 8);
+z2 = plot_columns(data_grid, rows, cols, 7);
 
 figure
 hold on;
-contour(x1, y1, z1)  % Use surf to see 3D plot
-contour(x2, y2, z2, [0.003 0.003])  % To draw 0.003 CO2% contour
+contour(x, y, z1, 20)
+scatter(x(col),y(row),'rx');
+% Draw CO2% contour
+[one_perc, h] = contour(x, y, z2, [0.01 0.01]);
+clabel(one_perc, h)
+[two_perc, h] = contour(x, y, z2, [0.02 0.02]);
+clabel(two_perc, h)
+[three_perc, h] = contour(x, y, z2, [0.03 0.03]);
+clabel(three_perc, h)
 
-function [x, y, z] = plot_columns(data_grid, rows, cols, column)
+figure
+hold on;
+surf(x, y, z1)
+h = scatter3(x(col),y(row),z1(i),'r', 'filled');
+
+function [z] = plot_columns(data_grid, rows, cols, column)
 z = zeros(rows, cols);
 for i = 1:cols
     z(1:rows, i) = data_grid((i-1)*rows + 1:i*rows, column);
 end
-x = 150:25:300;
-y = 108000:2000:120000;
 end
