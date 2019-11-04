@@ -20,6 +20,6 @@ figure
 hold on;
 contour(x1, x2, data, 30)
 [c, h] = contour(x1, x2, x_a, [0.12 0.12]);
-clabel(c, h);
+% clabel(c, h);
 [c, h] = contour(x1, x2, x_g, [0.08 0.08]);
-clabel(c, h);
+% clabel(c, h);
