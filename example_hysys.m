@@ -1,5 +1,5 @@
 %% User name variables
-hysys_name = "\testing.hsc";
+hysys_name = "\fast run.hsc";
 spreadsheet_input = "Inputs";
 spreadsheet_output = "Outputs";
 
@@ -20,6 +20,6 @@ GP = GPCreator(hysys, sample_points, outputs);
 toc
 
 %% Optimisation
-iter = 20;
+iter = 40;
 GP.optimise(iter);
 GP.plot();

@@ -1,19 +1,20 @@
 %% Load Williams-Otto
 tic
 WO = WilliamsOtto();
-toc
 
 %% Initialising Points for Training
 pointer = Pointer(WO.feasible_point_mat, WO.delta_mat);
-sample_points = pointer.random_sampling(10);
-toc
+sample_points = pointer.random_sampling();
+% Fb   = [6.9, 5.7, 6.35, 6.6, 6.75]';%
+% Tr   = [83, 74, 74.9, 75, 79]';%
+% sample_points = [Fb, Tr];
 [outputs, outputs_struct] = WO.get_output(sample_points);
-toc
 
 GP = GPCreator(WO, sample_points, outputs);
-toc
 
 %% Optimisation
-iter = 20;
+iter = 50;
 GP.optimise(iter);
+toc
 GP.plot();
+toc
