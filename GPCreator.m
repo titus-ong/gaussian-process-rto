@@ -204,7 +204,7 @@ classdef GPCreator  < handle
                 end
                 
                 % Check minimum and maximum trust region size
-                ratio = obj.delta(i, 1) / obj.delta(i - 1, 1);
+                ratio = obj.delta(i, 1) / obj.delta(rows, 1);
                 if ratio > obj.max_TR || ratio < obj.min_TR
                     obj.delta(i, :) = obj.delta(i - 1, :);
                 end
