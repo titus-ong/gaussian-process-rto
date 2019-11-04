@@ -33,6 +33,8 @@ classdef GPCreator  < handle
         rho                     % Rho matrix
     end
     properties (Constant)
+        min_TR = 0.01           % Minimum trust region as percentage of original delta
+        max_TR = 10             % Maximum trust region as percentage of original delta
         eta_low = 0.1           % Rho constant
         eta_high = 0.9          % Rho constant
         delta_reduction = 0.5   % Reduction in delta when Rho < eta_low
@@ -198,6 +200,12 @@ classdef GPCreator  < handle
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                end
+                
+                % Check minimum and maximum trust region size
+                ratio = obj.delta(i, 1) / obj.delta(i - 1, 1);
+                if ratio > obj.max_TR || ratio < obj.min_TR
+                    obj.delta(i, :) = obj.delta(i - 1, :);
                 end
                     
                 % Update values
