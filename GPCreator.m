@@ -37,6 +37,7 @@ classdef GPCreator  < handle
         eta_high = 0.9          % Rho constant
         delta_reduction = 0.5   % Reduction in delta when Rho < eta_low
         delta_expansion = 1.5   % Expansion in delta when Rho > eta_high
+        forgetting_factor = 1.5 % Allowance for inaccuracies in GP due to outdated data
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -84,6 +85,39 @@ classdef GPCreator  < handle
                 x, obj.model, obj.mean_input, obj.std_input, ...
                 obj.mean_output, obj.std_output ...
             );
+        end
+        
+        function forget_outdated(obj, true_objective)
+            % Check if old training inputs are irrelevant and remove them
+            % objective_long: with all training inputs
+            % objective_short: less the first (oldest) training input
+            inaccurate = true;
+            while size(obj.training_output, 1) > 10 && inaccurate
+                % Initialise short GP model
+                for i = 1:size(obj.training_output, 2)
+                    model_short.(obj.output_fields{i}) = fitrgp( ...
+                        obj.training_input(2:end, :), obj.training_output(2:end, i) ...
+                    );
+                end
+                
+                % Get predicted objective - long and short
+                objective_long = obj.obj_fn(obj.opt_min(end, :));
+                
+                objective_short = obj.objective_model( ...
+                    obj.opt_min(end, :), model_short, obj.mean_input, obj.std_input, ...
+                    obj.mean_output, obj.std_output ...
+                );
+            
+                ratio = abs((objective_long - true_objective) / (objective_short - true_objective));
+                
+                if ratio > obj.forgetting_factor
+                    obj.training_input = obj.training_input(2:end, :);
+                    obj.training_output = obj.training_output(2:end, :);
+                    obj.update_model();
+                else
+                    inaccurate = false;
+                end
+            end
         end
         
         function optimise(obj, iter)
@@ -134,6 +168,9 @@ classdef GPCreator  < handle
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
                 obj.training_output = [obj.training_output; true_output];
                 obj.update_model();
+                
+                % Account for outdated data
+                obj.forget_outdated(true_curr);
                 
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
