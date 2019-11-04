@@ -155,16 +155,7 @@ classdef HYSYSFile  < handle
         
         function objective = calc_objective(obj, outputs)
             % Calculate objective function from outputs
-            reboiler = (obj.output_fields=="reboiler_duty");
-            c200 = (obj.output_fields=="e_c200");
-            condenser = (obj.output_fields=="e_cooling_water");
-            j100 = (obj.output_fields=="e_j100");
-            j101 = (obj.output_fields=="e_j101");
-            objective = ( ...
-                outputs(reboiler) / 2256 * 0.009 + ...
-                (outputs(c200) - outputs(condenser)) / 84 / 1000 * 0.0005 + ...
-                (outputs(j100) + outputs(j101)) * 0.25 / 3600 ...
-            );
+            objective = outputs(obj.output_fields=="objective_true");
         end
         
         function value = get_param(obj, parameter)
