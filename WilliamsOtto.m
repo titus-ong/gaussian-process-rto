@@ -44,6 +44,8 @@ classdef WilliamsOtto
         objective_model                            % Objective function for model
         objective_true                             % Objective function for system
         system_violation                           % Test for system constraint violation
+        decay                                      % Decay boolean
+        time                                       % Pseudo time for decay
     end
     methods
         function obj = WilliamsOtto()
@@ -55,6 +57,20 @@ classdef WilliamsOtto
                 obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
             obj.objective_true = @(x) obj.true_obj_fn(x);
             obj.system_violation = @(y) obj.system_violated(y);
+            obj.decay = false;
+            obj.time = 0;
+        end
+        
+        function constraint = x_g_con(obj)
+            % x_g constraint increases from 0.08 to 0.12 over 50
+            % iterations, starting from iteration number 50 (i.e. it will
+            % reach 0.12 at the 100th interation)
+            constraint = 0.08;
+            constraint_max = 0.12;
+            if obj.decay
+                constraint = max(constraint, constraint + 0.04 * (obj.time - 50) / 50);
+                constraint = min(constraint_max, constraint);
+            end
         end
         
         function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
