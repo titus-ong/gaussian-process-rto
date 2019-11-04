@@ -5,16 +5,16 @@ WO = WilliamsOtto();
 
 %% Initialising Points for Training
 pointer = Pointer(WO.feasible_point_mat, WO.delta_mat);
-% sample_points = pointer.random_sampling(5);
-Fb = [6.9000, 6.6936, 7.0925, 7.0459, 7.8023, 7.1124, 6.8496, 6.3801, 7.1698, 6.6472, 6.2339]';
-Tr = [83.000, 75.119, 88.384, 80.046, 78.908, 77.458, 74.059, 76.123, 86.019, 85.985, 89.158]';
+sample_points = pointer.random_sampling();
+Fb = [6.9000, 6.7675, 7.0641, 7.1481, 6.9861, 6.6515]';
+Tr = [83.0000, 85.0262, 83.6761, 81.5130, 79.5847, 80.4423]';
 sample_points = [Fb, Tr];
 [outputs, outputs_struct] = WO.get_output(sample_points);
 
 GP = GPCreator(WO, sample_points, outputs);
 
 %% Optimisation
-iter = 10;
+iter = 20;
 GP.optimise(iter);
 toc
 GP.plot();
