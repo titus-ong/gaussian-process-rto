@@ -1,4 +1,4 @@
-classdef WilliamsOtto
+classdef WilliamsOtto  < handle
     properties (Constant)
         feasible_point = struct( ...
             "flowrate_b", 6.9, ...
@@ -73,7 +73,15 @@ classdef WilliamsOtto
             end
         end
         
-        function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
+        function obj = time_increment(obj)
+            % This is currently used in system_violated, since the function
+            % is run once per iteration and at the end of all calculations
+            if obj.decay
+                obj.time = obj.time + 1;
+            end
+        end
+        
+        function [c,ceq] = nonlin_fn(obj, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
             
             % Point is within delta
@@ -87,11 +95,11 @@ classdef WilliamsOtto
             c(2) = constraint_x_a(x, model);
             
             % x_g to be less than 0.08
-            function percentage = constraint_x_g(x, model)
+            function percentage = constraint_x_g(obj, x, model)
                 predicted = predict(model.x_g, x);
-                percentage = predicted - 0.08;
+                percentage = predicted - obj.x_g_con();
             end
-            c(3) = constraint_x_g(x, model);
+            c(3) = constraint_x_g(obj, x, model);
 
             ceq = [];
         end
@@ -104,11 +112,14 @@ classdef WilliamsOtto
             x_a = (obj.output_fields=="x_a");
             x_g = (obj.output_fields=="x_g");
             
-            if output(x_a) > 0.12 || output(x_g) > 0.08
+            if output(x_a) > 0.12 || output(x_g) > obj.x_g_con()
                 bool = true;
             else
                 bool = false;
             end
+            
+            % Increment time for decay
+            obj.time_increment();
         end
         
         function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
