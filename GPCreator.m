@@ -33,10 +33,13 @@ classdef GPCreator  < handle
         rho                     % Rho matrix
     end
     properties (Constant)
+        min_TR = 0.1           % Minimum trust region as percentage of original delta
+        max_TR = 10             % Maximum trust region as percentage of original delta
         eta_low = 0.1           % Rho constant
         eta_high = 0.9          % Rho constant
         delta_reduction = 0.5   % Reduction in delta when Rho < eta_low
         delta_expansion = 1.5   % Expansion in delta when Rho > eta_high
+        forgetting_factor = 1.5 % Allowance for inaccuracies in GP due to outdated data
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -86,6 +89,39 @@ classdef GPCreator  < handle
             );
         end
         
+        function forget_outdated(obj, true_objective)
+            % Check if old training inputs are irrelevant and remove them
+            % objective_long: with all training inputs
+            % objective_short: less the first (oldest) training input
+            inaccurate = true;
+            while size(obj.training_output, 1) > 10 && inaccurate
+                % Initialise short GP model
+                for i = 1:size(obj.training_output, 2)
+                    model_short.(obj.output_fields{i}) = fitrgp( ...
+                        obj.training_input(2:end, :), obj.training_output(2:end, i) ...
+                    );
+                end
+                
+                % Get predicted objective - long and short
+                objective_long = obj.obj_fn(obj.opt_min(end, :));
+                
+                objective_short = obj.objective_model( ...
+                    obj.opt_min(end, :), model_short, obj.mean_input, obj.std_input, ...
+                    obj.mean_output, obj.std_output ...
+                );
+            
+                ratio = abs((objective_long - true_objective) / (objective_short - true_objective));
+                
+                if ratio > obj.forgetting_factor
+                    obj.training_input = obj.training_input(2:end, :);
+                    obj.training_output = obj.training_output(2:end, :);
+                    obj.update_model();
+                else
+                    inaccurate = false;
+                end
+            end
+        end
+        
         function optimise(obj, iter)
             % Pre-allocation
             cols = size(obj.centre, 2);
@@ -107,7 +143,7 @@ classdef GPCreator  < handle
                 );
                 
                 % Optimise from various starting points
-                starting_pts = pointer.random_sampling();
+                starting_pts = pointer.random_sampling(10);
                 dim = size(starting_pts);
                 opt_points = zeros(dim(1), dim(2));
                 fvals = zeros(dim(1), 1);
@@ -130,10 +166,13 @@ classdef GPCreator  < handle
                 true_last = obj.objective_true(obj.centre(i-1, :));
                 
                 % Train new GP
-                [new_output, ~] = obj.system.get_output(obj.opt_min(i, :));
+                [true_output, ~] = obj.system.get_output(obj.opt_min(i, :));
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
-                obj.training_output = [obj.training_output; new_output];
+                obj.training_output = [obj.training_output; true_output];
                 obj.update_model();
+                
+                % Account for outdated data
+                obj.forget_outdated(true_curr);
                 
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
@@ -144,7 +183,7 @@ classdef GPCreator  < handle
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
-                if obj.system_violation(true_curr)
+                if obj.system_violation(true_output)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
@@ -158,8 +197,16 @@ classdef GPCreator  < handle
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
-                else
-                    error("Rho could not be calculated");
+                else  % Rho calculated is NaN
+                    obj.centre(i, :) = obj.centre(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.rho(i) = Inf;
+                end
+                
+                % Check minimum and maximum trust region size
+                ratio = obj.delta(i, 1) / obj.delta(rows, 1);
+                if ratio > obj.max_TR || ratio < obj.min_TR
+                    obj.delta(i, :) = obj.delta(i - 1, :);
                 end
                     
                 % Update values
@@ -171,27 +218,43 @@ classdef GPCreator  < handle
             % Plot centre moving against objective function
             % Plot delta around centres
             if size(obj.centre, 2)==2
-                obj.plot2d_indiv(size(obj.centre, 1));
+                obj.plot2d_indiv();
             end
         end
         
-        function plot2d_indiv(obj, idx)
+        function plot2d_indiv(obj)
             f = figure;
             hold on;
-            points = zeros(idx, size(obj.centre, 2));
-            deltas = zeros(idx, size(obj.centre, 2));
+            
+            idx = size(obj.centre, 1);
+            points = zeros(idx, 2);
+            deltas = zeros(idx, 2);
             syms x y a b h k
-            for i = 1:idx
+            for i = 1:size(obj.centre, 1)
                 points(i, :) = obj.centre(i, :);
-                a = obj.delta(i, 2);
-                b = obj.delta(i, 1);
-                h = points(i, 2);
-                k = points(i, 1);
+                a = obj.delta(i, 1);
+                b = obj.delta(i, 2);
+                h = points(i, 1);
+                k = points(i, 2);
                 ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
                 fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)]);
                 hold on;
             end
-            plot(points(:, 2), points(:, 1));
+            plot(points(:, 1), points(:, 2), '-*');
+%             x1 = linspace(obj.lb(2), obj.ub(2), 10);
+%             y1 = linspace(obj.lb(1), obj.ub(1), 10);
+%             fvals = zeros(10, 10);
+%             co2 = zeros(10, 10);
+%             for i = 1:10
+%                 for j = 1:10
+%                     fvals(j, i) = obj.obj_fn([y1(i), x1(j)]);
+%                     co2(j, i) = predict(obj.model.clean_gas_co2, [y1(i), x1(j)]);
+%                 end
+%             end
+%             figure;
+%             hold on;
+%             surf(x1, y1, fvals);
+%             surf(x1, y1, co2);
         end
     end
 end
