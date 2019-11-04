@@ -1,4 +1,4 @@
-classdef GPCreator  < handle
+classdef GPCreator  < matlab.mixin.Copyable
     properties
         system                  % Either HYSYSFile or system object
         objective_model         % Objective function for model
