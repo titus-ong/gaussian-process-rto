@@ -46,6 +46,7 @@ classdef WilliamsOtto  < handle
         system_violation                           % Test for system constraint violation
         decay                                      % Decay boolean
         time                                       % Pseudo time for decay
+        op_region_script                           % Function for plotting operating region
     end
     methods
         function obj = WilliamsOtto()
@@ -59,6 +60,7 @@ classdef WilliamsOtto  < handle
             obj.system_violation = @(y) obj.system_violated(y);
             obj.decay = false;
             obj.time = 0;
+            obj.op_region_script = @op_region_plot_WO;
         end
         
         function constraint = x_g_con(obj)
@@ -89,14 +91,14 @@ classdef WilliamsOtto  < handle
             
             % x_a to be less than 0.12
             function percentage = constraint_x_a(x, model)
-                predicted = predict(model.x_a, x);
+                predicted = predict(model(end).x_a, x);
                 percentage = predicted - 0.12;
             end
             c(2) = constraint_x_a(x, model);
             
             % x_g to be less than 0.08
             function percentage = constraint_x_g(x, model)
-                predicted = predict(model.x_g, x);
+                predicted = predict(model(end).x_g, x);
                 percentage = predicted - 0.08;
             end
             c(3) = constraint_x_g(x, model);
@@ -127,7 +129,7 @@ classdef WilliamsOtto  < handle
             outputs = zeros(1, length(obj.output_fields));
             for i = 1:length(obj.output_fields)
 %                 outputs(i) = predict(model(i), (x - mean_x) ./ std_x) .* std_y(i) + mean_y(i);
-                outputs(i) = predict(model.(obj.output_fields{i}), x);
+                outputs(i) = predict(model(end).(obj.output_fields{i}), x);
             end
             objective = obj.calc_objective(outputs);
         end

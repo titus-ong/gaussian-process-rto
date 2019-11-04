@@ -87,6 +87,7 @@ classdef HYSYSFile  < handle
         objective_model                        % Objective function for model
         objective_true                         % Objective function for system
         system_violation                       % Test for system constraint violation
+        op_region_script                       % Function for plotting operating region
     end
     methods
         function obj = HYSYSFile(filepath, spreadsheet_input, spreadsheet_output) % Constructor method
@@ -106,6 +107,7 @@ classdef HYSYSFile  < handle
                 obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
             obj.objective_true = @(x) obj.true_obj_fn(x);
             obj.system_violation = @(y) obj.system_violated(y);
+            obj.op_region_script = @op_region_plot_hysys;
         end
         
         function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
@@ -117,7 +119,7 @@ classdef HYSYSFile  < handle
             % Clean [CO2] from absorber
             function percentage = co2_fn(x, model, mean_x, std_x, mean_y, std_y)
 %                 logic_arr = (obj.output_fields=="clean_gas_co2");
-                predicted = predict(model.clean_gas_co2, x);
+                predicted = predict(model(end).clean_gas_co2, x);
 %                 predicted = predict( ...
 %                     model.clean_gas_co2, (x - mean_x) ./ std_x ...
 %                         ) .* std_y(logic_arr) + mean_y(logic_arr);
@@ -140,7 +142,7 @@ classdef HYSYSFile  < handle
             outputs = zeros(1, length(obj.output_fields));
             for i = 1:length(obj.output_fields)
 %                 outputs(i) = predict(model(i), (x - mean_x) ./ std_x) .* std_y(i) + mean_y(i);
-                outputs(i) = predict(model.(obj.output_fields{i}), x);
+                outputs(i) = predict(model(end).(obj.output_fields{i}), x);
             end
             objective = obj.calc_objective(outputs);
         end

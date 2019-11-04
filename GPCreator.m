@@ -65,6 +65,7 @@ classdef GPCreator  < handle
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
             
+            obj.model = struct();
             obj.update_model();
         end
         
@@ -78,8 +79,9 @@ classdef GPCreator  < handle
             obj.norm_output = normalize(obj.training_output);
             
             % Initialise GP model
+            idx = size(obj.model, 2);
             for i = 1:size(obj.training_output, 2)
-                obj.model.(obj.output_fields{i}) = fitrgp(obj.training_input, obj.training_output(:, i));
+                obj.model(idx+1).(obj.output_fields{i}) = fitrgp(obj.training_input, obj.training_output(:, i));
             end
             
             % Update objective function with current iteration data
@@ -143,7 +145,7 @@ classdef GPCreator  < handle
                 );
                 
                 % Optimise from various starting points
-                starting_pts = pointer.random_sampling(10);
+                starting_pts = pointer.random_sampling();
                 dim = size(starting_pts);
                 opt_points = zeros(dim(1), dim(2));
                 fvals = zeros(dim(1), 1);
@@ -223,7 +225,7 @@ classdef GPCreator  < handle
         end
         
         function plot2d_indiv(obj)
-            f = figure;
+            obj.system.op_region_script();
             hold on;
             
             idx = size(obj.centre, 1);
@@ -241,20 +243,6 @@ classdef GPCreator  < handle
                 hold on;
             end
             plot(points(:, 1), points(:, 2), '-*');
-%             x1 = linspace(obj.lb(2), obj.ub(2), 10);
-%             y1 = linspace(obj.lb(1), obj.ub(1), 10);
-%             fvals = zeros(10, 10);
-%             co2 = zeros(10, 10);
-%             for i = 1:10
-%                 for j = 1:10
-%                     fvals(j, i) = obj.obj_fn([y1(i), x1(j)]);
-%                     co2(j, i) = predict(obj.model.clean_gas_co2, [y1(i), x1(j)]);
-%                 end
-%             end
-%             figure;
-%             hold on;
-%             surf(x1, y1, fvals);
-%             surf(x1, y1, co2);
         end
     end
 end
