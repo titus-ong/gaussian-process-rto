@@ -1,4 +1,4 @@
-classdef HYSYSFile  < handle
+classdef HYSYSFile  < matlab.mixin.Copyable
     properties (SetAccess=private)
         simulation                                 % Simulation object
         flowsheet                                  % Simulation flowsheet
