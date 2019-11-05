@@ -31,9 +31,11 @@ classdef GPCreator  < matlab.mixin.Copyable
         fval_min                % GP objective function value matrix
         opt_min                 % Optimal point matrix
         rho                     % Rho matrix
+        
+        forget                  % Forgetting factor boolean
     end
     properties (Constant)
-        min_TR = 0.1           % Minimum trust region as percentage of original delta
+        min_TR = 0.1            % Minimum trust region as percentage of original delta
         max_TR = 10             % Maximum trust region as percentage of original delta
         eta_low = 0.1           % Rho constant
         eta_high = 0.9          % Rho constant
@@ -67,6 +69,8 @@ classdef GPCreator  < matlab.mixin.Copyable
             
             obj.model = struct();
             obj.update_model();
+            
+            obj.forget = false;
         end
         
         function obj = update_model(obj)
@@ -174,7 +178,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                 obj.update_model();
                 
                 % Account for outdated data
-                obj.forget_outdated(true_curr);
+                if obj.forget
+                    obj.forget_outdated(true_curr);
+                end
                 
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
