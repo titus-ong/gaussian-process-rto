@@ -14,12 +14,13 @@ To-Do
 
 MATLAB:
 
-- Add plotting function for GPCreator
-- Add Williams-Otto file for fast testing
-- Add forgetting factor
-- Add function to test for system violation
+- Forgetting factor for unconstrained problem
+- Forgetting factor for expanding constraint (and shrinking)
+- Normalise data
+- Change TR radius with reduced gradient
+- Put GP parameters into system files
+- Change GP to model obj and constraints
 
 HYSYS:
 
-- Case study function over entire operating envelope
 - Level control storage drums
