@@ -20,6 +20,6 @@ GP = GPCreator(hysys, sample_points, outputs);
 toc
 
 %% Optimisation
-iter = 50;
+iter = 20;
 GP.optimise(iter);
 GP.plot();

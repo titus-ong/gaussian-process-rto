@@ -4,7 +4,7 @@ cols = 31;
 x1 = linspace(hysys.lb(1), hysys.ub(1), cols);
 x2 = linspace(hysys.lb(2), hysys.ub(2), rows);
 temp_GP = copy(GP);
-model_idx = 2;
+model_idx = 11;
 temp_GP.model = temp_GP.model(1:model_idx);
 
 data = zeros(rows, cols);
