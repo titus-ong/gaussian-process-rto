@@ -4,19 +4,25 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             "flowrate_b", 6.9, ...
             "t_reactor", 83 ...
             );
-        delta = struct( ...
+        delta = 0.15;
+        delta_lb = 0.005;
+        delta_point = struct( ...
             "flowrate_b", 0.4, ...
             "t_reactor", 4 ...
             );
-        output_fields = { ...
-            'flowrate_out', ...
-            'x_a', ...
-            'x_b', ...
-            'x_c', ...
-            'x_e', ...
-            'x_g', ...
-            'x_p' ...
+        delta_norm = struct( ...
+            "flowrate_b", 9, ...
+            "t_reactor", 900 ...
+            );
+        constraints_ineq = { ...
+            'x_a_con', ...
+            'x_g_con' ...
             };
+        constraints_eq = [];
+        constants = struct( ...
+            "flowrate_a", 1.8275, ...              % Inlet flowrate of A
+            "total_molar_flowrate", 2105.2 ...     % Total molar flowrate
+            );
         linear_con_A = [];                         % Linear inequality constraints LHS (Ax = b)
         linear_con_b = [];                         % Linear inequality constraints LHS
         lineq_con_A = [];                          % Linear equality constraints LHS
@@ -27,9 +33,6 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
     end
     properties
         init_var = struct( ...
-            "flowrate_a", 1.8275, ...                % Inlet flowrate of A
-            "total_molar_flowrate", 2105.2, ...    % Total molar flowrate
-            "flowrate_out", NaN, ...               % Outlet flowrate
             "x_a", 0.2, ...                        % Outlet concentration of A
             "x_b", 0.2, ...                        % Outlet concentration of B
             "x_c", 0.2, ...                        % Outlet concentration of C
@@ -40,10 +43,6 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         
         feasible_point_mat                         % Matrix form
         delta_mat                                  % Matrix form
-        nonlin_con                                 % Nonlinear constraints
-        objective_model                            % Objective function for model
-        objective_true                             % Objective function for system
-        system_violation                           % Test for system constraint violation
         decay                                      % Decay boolean
         time                                       % Pseudo time for decay
         op_region_script                           % Function for plotting operating region
@@ -51,147 +50,120 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
     methods
         function obj = WilliamsOtto()
             obj.feasible_point_mat = cell2mat(struct2cell(obj.feasible_point))';
-            obj.delta_mat = cell2mat(struct2cell(obj.delta))';
-            obj.nonlin_con = @(x, centre, delta, model, mean_x, std_x, mean_y, std_y) ...
-                obj.nonlin_fn(x, centre, delta, model, mean_x, std_x, mean_y, std_y);
-            obj.objective_model = @(x, model, mean_x, std_x, mean_y, std_y) ...
-                obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
-            obj.objective_true = @(x) obj.true_obj_fn(x);
-            obj.system_violation = @(y) obj.system_violated(y);
+            obj.delta_mat = cell2mat(struct2cell(obj.delta_point))';
             obj.decay = false;
             obj.time = 0;
             obj.op_region_script = @op_region_plot_WO;
         end
         
-        function constraint = x_g_con(obj)
-            % x_g constraint increases from 0.08 to 0.12 over 50
-            % iterations, starting from iteration number 50 (i.e. it will
-            % reach 0.12 at the 100th interation)
-            constraint = 0.08;
-            constraint_max = 0.12;
-            if obj.decay
-                constraint = max(constraint, constraint + 0.04 * (obj.time - 30) / 50);
-                constraint = min(constraint_max, constraint);
-            end
+        function objective = objective_value(obj, inputs, outputs)
+            % Calculate objective function
+            flowrate_b = inputs(fieldnames(obj.feasible_point)=="flowrate_b");
+            flowrate_out = flowrate_b + obj.constants.flowrate_a;
+            x_p = outputs(fieldnames(obj.init_var)=="x_p");
+            x_e = outputs(fieldnames(obj.init_var)=="x_e");
+            objective = -( ...
+                1043.38 * x_p * flowrate_out + ...
+                20.92 * x_e * flowrate_out - ...
+                79.23 * obj.constants.flowrate_a - 118.34 * flowrate_b ...
+                );
+        end
+        
+        function constraint = x_a_con(obj, ~, outputs)
+            % x_a < 0.12
+            x_a = outputs(fieldnames(obj.init_var)=="x_a");
+            constraint = x_a - 0.12;
+        end
+        
+        function constraint = x_g_con(obj, ~, outputs)
+            % x_g < 0.08
+            x_g = outputs(fieldnames(obj.init_var)=="x_g");
+            constraint = x_g - 0.08;
         end
         
         function obj = time_increment(obj)
-            % This is currently used in system_violated, since the function
-            % is run once per iteration and at the end of all calculations
             if obj.decay
                 obj.time = obj.time + 1;
             end
         end
         
-        function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
+        function [c,ceq] = nonlin_con(obj, x, par)  % centre, delta, model, mean_x, std_x, mean_y, std_y)
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
+            c = zeros(1 + length(obj.constraints_ineq), 1);
             
-            % Point is within delta
-            c(1) = sum((x - centre).^2 ./ delta.^2) - 1;
-            
-            % x_a to be less than 0.12
-            function percentage = constraint_x_a(x, model)
-                predicted = predict(model(end).x_a, x);
-                percentage = predicted - 0.12;
+            % Inequality constraints
+            for i = 1:length(obj.constraints_ineq)
+                c(i) = predict(par.model.(obj.constraints_ineq{i}), x);
             end
-            c(2) = constraint_x_a(x, model);
             
-            % x_g to be less than 0.08
-            function percentage = constraint_x_g(x, model)
-                predicted = predict(model(end).x_g, x);
-                percentage = predicted - 0.08;
+            % Point is within delta - must be the final equation!
+            c(end) = ((x - par.centre) * diag(1 ./ par.delta_norm) ...
+                * (x - par.centre)' / par.delta^2) - 1;
+            
+            ceq = zeros(length(obj.constraints_eq), 1);
+            % Equality constraints
+            for i = 1:length(obj.constraints_eq)
+                ceq(i) = predict(par.model.(obj.constraints_eq{i}), x);
             end
-            c(3) = constraint_x_g(x, model);
-
-            ceq = [];
         end
         
-        function bool = system_violated(obj, output)
+        function par = create_par(obj, GPobj, idx)
+            % Create parameters for fmincon (used in nonlin_fn)
+            par.model = GPobj.model(end);
+            par.centre = GPobj.centre(idx, :);
+            par.delta = obj.delta;
+            par.delta_norm = cell2mat(struct2cell(obj.delta_norm))';
+        end
+        
+        function bool = system_violated(~, con_ineq, con_eq)
             % Test if output violates system constraints
             % Return true if violated, false if not
+            tol = 1e-4;
+            bool = false;
             
-            % Logical arrays
-            x_a = (obj.output_fields=="x_a");
-            x_g = (obj.output_fields=="x_g");
-            
-            if output(x_a) > 0.12 || output(x_g) > 0.08
-                bool = true;
-            else
-                bool = false;
-            end
-            
-            % Increment time for decay
-            % obj.time_increment();
-        end
-        
-        function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
-            % Calculate objective function for model
-            outputs = zeros(1, length(obj.output_fields));
-            for i = 1:length(obj.output_fields)
-%                 outputs(i) = predict(model(i), (x - mean_x) ./ std_x) .* std_y(i) + mean_y(i);
-                outputs(i) = predict(model(end).(obj.output_fields{i}), x);
-            end
-            objective = obj.calc_objective(outputs);
-        end
-        
-        function objective = true_obj_fn(obj, x)
-            % Calculate objective function for system
-            [outputs, ~] = obj.get_output(x);
-            objective = obj.calc_objective(outputs);
-        end
-        
-        function objective = calc_objective(obj, outputs)
-            % Calculate objective function from outputs
-            flowrate_out = (obj.output_fields=="flowrate_out");
-            x_p = (obj.output_fields=="x_p");
-            x_e = (obj.output_fields=="x_e");
-            flowrate_b = outputs(flowrate_out) - obj.init_var.flowrate_a;
-            objective = -( ...
-                1043.38 * outputs(x_p) * outputs(flowrate_out) + ...
-                20.92 * outputs(x_e) * outputs(flowrate_out) - ...
-                79.23 * obj.init_var.flowrate_a - 118.34 * flowrate_b ...
-                );
-        end
-        
-        function [outputs, outputs_struct] = get_output(obj, inputs)
-            % Get output values from HYSYS spreadsheet using given inputs
-            outputs_struct = struct();
-            x0_fields = { ...
-                'x_a', ...
-                'x_b', ...
-                'x_c', ...
-                'x_e', ...
-                'x_g', ...
-                'x_p', ...
-                'flowrate_out' ...  % Has to be calculated for each input
-                };
-            x0 = [ ...
-                obj.init_var.x_a, ...
-                obj.init_var.x_b, ...
-                obj.init_var.x_c, ...
-                obj.init_var.x_e, ...
-                obj.init_var.x_g, ...
-                obj.init_var.x_p ...
-                ];
-            option = optimset('TolFun',1e-8,'TolX',1e-8,'Algorithm','trust-region-dogleg','Display','off');%'Display','iter',
-
-            % Logical arrays for getting indices
-            flow_b = (fieldnames(obj.feasible_point)=="flowrate_b");
-            
-            % Solve reactor
-            for point = 1:size(inputs, 1)
-                curr_inputs = inputs(point, :);
-                [x, ~] = fsolve(@obj.system_of_eqns, x0, option, curr_inputs);
-                x(end + 1) = curr_inputs(flow_b) + obj.init_var.flowrate_a;
-                for idx = 1:length(obj.output_fields)
-                    field = convertCharsToStrings(obj.output_fields{idx});
-                    outputs_struct(point).(obj.output_fields{idx}) = x(x0_fields==field);
+            % Check inequality constraints
+            for i = 1:length(con_ineq)
+                if con_ineq(i) > 0
+                    bool = true;
                 end
             end
-            outputs_struct = orderfields(outputs_struct, obj.output_fields);
-            outputs = squeeze(cell2mat(struct2cell(outputs_struct)));
-            if size(outputs, 2) ~= length(obj.output_fields)
-                outputs = outputs';
+            
+            % Check equality constraints
+            for i = 1:length(con_eq)
+                if abs(con_eq(i)) > tol
+                    bool = true;
+                end
+            end
+        end
+        
+        function [objective, con_ineq, con_eq] = get_output(obj, inputs)
+            % Get objective function and constraint values using given inputs
+            x0 = squeeze(cell2mat(struct2cell(obj.init_var)));
+            option = optimset( ...
+                'TolFun', 1e-8, 'TolX', 1e-8, 'Algorithm', ...
+                'trust-region-dogleg', 'Display', 'off' ...
+                );  % or 'Display','iter'
+            
+            n = size(inputs, 1);
+            m = length(obj.constraints_ineq);
+            k = length(obj.constraints_eq);
+            objective = zeros(n, 1);
+            con_ineq = zeros(n, m);
+            con_eq = zeros(n, k);
+            
+            % Solve reactor
+            for point = 1:n
+                curr_inputs = inputs(point, :);
+                [x, ~] = fsolve(@obj.system_of_eqns, x0, option, curr_inputs);
+                objective(point) = obj.objective_value(curr_inputs, x);
+                for idx = 1:m
+                    val = obj.(obj.constraints_ineq{idx})(curr_inputs, x);
+                    con_ineq(point, idx) = val;
+                end
+                for idx = 1:k
+                    val = obj.(obj.constraints_eq{idx})(curr_inputs, x);
+                    con_eq(point, idx) = val;
+                end
             end
         end
         
@@ -203,8 +175,8 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             x_e = x(4);
             x_g = x(5);
             x_p = x(6);
-            M_total = obj.init_var.total_molar_flowrate;
-            flow_a = obj.init_var.flowrate_a;
+            M_total = obj.constants.total_molar_flowrate;
+            flow_a = obj.constants.flowrate_a;
             
             % Logical arrays for getting indices
             temp = (fieldnames(obj.feasible_point)=="t_reactor");
@@ -215,7 +187,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             
             % Rate constants
             k1 = 1.6599e6 * exp(-6666.7 / (inputs(temp) + 273.15));
-            k2 = 7.2117e8 * min(max(1, (obj.time + 80)/100), 1.3) * exp(-8333.3 / (inputs(temp) + 273.15));
+            k2 = 7.2117e8 * exp(-8333.3 / (inputs(temp) + 273.15));
             k3 = 2.6745e12 * exp(-11111 / (inputs(temp) + 273.15));
             
             % Rates of reaction

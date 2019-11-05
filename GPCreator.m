@@ -1,30 +1,19 @@
 classdef GPCreator  < matlab.mixin.Copyable
     properties
         system                  % Either HYSYSFile or system object
-        objective_model         % Objective function for model
-        objective_true          % Objective function for system
-        obj_fn                  % Objective function with model inputs
         linear_con_A            % System linear inequality constraints LHS (Ax = b)
         linear_con_b            % System linear inequality constraints RHS
         lineq_con_A             % System linear equality constraints LHS
         lineq_con_b             % System linear equality constraints RHS
+        con_ineq                % System nonlinear inequality constraints
+        con_eq                  % System nonlinear equality constraints
         lb                      % System lower bounds
         ub                      % System upper bounds
-        nonlin_con              % System nonlinear constraints
         options                 % System options for GP
-        system_violation        % Test for true violation of system constraints
-        output_fields           % System field names for outputs
         model                   % GP model
         
         training_input          % Training input data
-        mean_input              % Mean of input
-        std_input               % Standard deviation of input
-        norm_input              % Normalised input
-        
         training_output         % Training output data
-        mean_output             % Mean of output
-        std_output              % Standard deviation of output
-        norm_output             % Normalised output
         
         centre                  % Centre matrix
         delta                   % Delta matrix
@@ -46,18 +35,15 @@ classdef GPCreator  < matlab.mixin.Copyable
     methods
         function obj = GPCreator(system, training_input, training_output)
             obj.system = system;
-            obj.objective_model = system.objective_model;
-            obj.objective_true = system.objective_true;
             obj.linear_con_A = system.linear_con_A;
             obj.linear_con_b = system.linear_con_b;
             obj.lineq_con_A = system.lineq_con_A;
             obj.lineq_con_b = system.lineq_con_b;
             obj.lb = system.lb;
             obj.ub = system.ub;
-            obj.nonlin_con = system.nonlin_con;
             obj.options = system.options;
-            obj.system_violation = system.system_violation;
-            obj.output_fields = system.output_fields;
+            obj.con_ineq = system.constraints_ineq;
+            obj.con_eq = system.constraints_eq;
             
             obj.training_input = training_input;
             obj.training_output = training_output;
@@ -73,26 +59,26 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.forget = false;
         end
         
-        function obj = update_model(obj)
-            % Normalise data
-            obj.mean_input = mean(obj.training_input);
-            obj.std_input = std(obj.training_input);
-            obj.norm_input = normalize(obj.training_input);
-            obj.mean_output = mean(obj.training_output);
-            obj.std_output = std(obj.training_output);
-            obj.norm_output = normalize(obj.training_output);
-            
+        function obj = update_model(obj)            
             % Initialise GP model
-            idx = size(obj.model, 2);
-            for i = 1:size(obj.training_output, 2)
-                obj.model(idx+1).(obj.output_fields{i}) = fitrgp(obj.training_input, obj.training_output(:, i));
+            idx = size(obj.model, 2) + 1;
+            if idx == 2  % model is empty
+                idx = 1;  % So model fills up from first row
             end
             
-            % Update objective function with current iteration data
-            obj.obj_fn = @(x) obj.objective_model( ...
-                x, obj.model, obj.mean_input, obj.std_input, ...
-                obj.mean_output, obj.std_output ...
-            );
+            obj.model(idx).objective = fitrgp( ...
+                obj.training_input, obj.training_output.objective ...
+                );
+            for i = 1:size(obj.training_output.con_ineq, 2)
+                obj.model(idx).(obj.con_ineq{i}) = fitrgp( ...
+                    obj.training_input, obj.training_output.con_ineq(:, i) ...
+                    );
+            end
+            for i = 1:size(obj.training_output.con_eq, 2)
+                obj.model(idx).(obj.con_eq{i}) = fitrgp( ...
+                    obj.training_input, obj.training_output.con_eq(:, i) ...
+                    );
+            end
         end
         
         function forget_outdated(obj, true_objective)
@@ -100,32 +86,32 @@ classdef GPCreator  < matlab.mixin.Copyable
             % objective_long: with all training inputs
             % objective_short: less the first (oldest) training input
             inaccurate = true;
-            while size(obj.training_output, 1) > 10 && inaccurate
+            while size(obj.training_input, 1) > 10 && inaccurate
                 % Initialise short GP model
-                for i = 1:size(obj.training_output, 2)
-                    model_short.(obj.output_fields{i}) = fitrgp( ...
-                        obj.training_input(2:end, :), obj.training_output(2:end, i) ...
-                    );
-                end
+                model_short = fitrgp( ...
+                    obj.training_input(2:end, :), obj.training_output.objective(2:end) ...
+                );
+                objective_short = predict(model_short, (obj.opt_min(end, :)));
                 
                 % Get predicted objective - long and short
-                objective_long = obj.obj_fn(obj.opt_min(end, :));
-                
-                objective_short = obj.objective_model( ...
-                    obj.opt_min(end, :), model_short, obj.mean_input, obj.std_input, ...
-                    obj.mean_output, obj.std_output ...
-                );
+                objective_long = predict(obj.model(end).objective, (obj.opt_min(end, :)));
             
                 ratio = abs((objective_long - true_objective) / (objective_short - true_objective));
                 
                 if ratio > obj.forgetting_factor
                     obj.training_input = obj.training_input(2:end, :);
-                    obj.training_output = obj.training_output(2:end, :);
+                    obj.training_output.objective = obj.training_output.objective(2:end, :);
+                    obj.training_output.con_eq = obj.training_output.con_eq(2:end, :);
+                    obj.training_output.con_ineq = obj.training_output.con_ineq(2:end, :);
                     obj.update_model();
                 else
                     inaccurate = false;
                 end
             end
+        end        
+        
+        function objective = obj_fn(obj, x)
+            objective = predict(obj.model(end).objective, x);
         end
         
         function optimise(obj, iter)
@@ -140,41 +126,50 @@ classdef GPCreator  < matlab.mixin.Copyable
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
+            true_last = obj.system.get_output(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
-                % Update nonlinear constraints with current iteration data
-                nonlincon = @(x) obj.nonlin_con( ...
-                    x, obj.centre(i-1, :), obj.delta(i-1, :), obj.model, obj.mean_input, ...
-                    obj.std_input, obj.mean_output, obj.std_output ...
-                );
+                % Update parameters for constraints with current iteration data
+                par = obj.system.create_par(obj, i-1);
+                func_obj = @(x, ~) obj.obj_fn(x);
+                nonlin_con = @(x, par) obj.system.nonlin_con(x, par);
                 
-                % Optimise from various starting points
-                starting_pts = pointer.random_sampling();
-                dim = size(starting_pts);
-                opt_points = zeros(dim(1), dim(2));
-                fvals = zeros(dim(1), 1);
-                for each = 1:dim(1)
-                    [opt, fval] = fmincon( ...
-                        obj.obj_fn, starting_pts(each, :), obj.linear_con_A, ...
-                        obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
-                        obj.lb, obj.ub, nonlincon, obj.options);
-                    opt_points(each, :) = opt;
-                    fvals(each) = fval;
-                end
+%                 % Optimise from various starting points
+%                 starting_pts = pointer.random_sampling(1);
+%                 dim = size(starting_pts);
+%                 opt_points = zeros(dim(1), dim(2));
+%                 fvals = zeros(dim(1), 1);
+%                 for each = 1:dim(1)
+%                     [opt, fval] = fmincon( ...
+%                         func_obj, starting_pts(each, :), obj.linear_con_A, ...
+%                         obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
+%                         obj.lb, obj.ub, nonlin_con, obj.options, par ...
+%                         );
+%                     opt_points(each, :) = opt;
+%                     fvals(each) = fval;
+%                 end
+%                 
+%                 % Get lowest (local) optima out of the starting points
+%                 [obj.fval_min(i), idx] = min(fvals);
+%                 obj.opt_min(i, :) = opt_points(idx, :);
+
+                % Optimise using fmincon
+                [opt, fval] = fmincon( ...
+                    func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
+                    obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
+                    obj.lb, obj.ub, nonlin_con, obj.options, par ...
+                    );
+                obj.fval_min(i) = fval;
+                obj.opt_min(i, :) = opt;
                 
-                % Get lowest (local) optima out of the starting points
-                [obj.fval_min(i), idx] = min(fvals);
-                obj.opt_min(i, :) = opt_points(idx, :);
-                
-                % True values
-                % Use objective method for true because we don't want to have model inputs
-                true_curr = obj.objective_true(obj.opt_min(i, :));
-                true_last = obj.objective_true(obj.centre(i-1, :));
+                % Move to new point and get true values
+                [true_curr, ineq, eq] = obj.system.get_output(obj.opt_min(i, :));
                 
                 % Train new GP
-                [true_output, ~] = obj.system.get_output(obj.opt_min(i, :));
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
-                obj.training_output = [obj.training_output; true_output];
+                obj.training_output.objective = [obj.training_output.objective; true_curr];
+                obj.training_output.con_ineq = [obj.training_output.con_ineq; ineq];
+                obj.training_output.con_eq = [obj.training_output.con_eq; eq];
                 obj.update_model();
                 
                 % Account for outdated data
@@ -191,7 +186,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
-                if obj.system_violation(true_output)
+                if obj.system.system_violated(ineq, eq)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
