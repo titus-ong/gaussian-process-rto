@@ -70,7 +70,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             constraint = 0.08;
             constraint_max = 0.12;
             if obj.decay
-                constraint = max(constraint, constraint + 0.04 * (obj.time - 50) / 50);
+                constraint = max(constraint, constraint + 0.04 * (obj.time - 30) / 50);
                 constraint = min(constraint_max, constraint);
             end
         end
@@ -114,14 +114,14 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             x_a = (obj.output_fields=="x_a");
             x_g = (obj.output_fields=="x_g");
             
-            if output(x_a) > 0.12 || output(x_g) > obj.x_g_con()
+            if output(x_a) > 0.12 || output(x_g) > 0.08
                 bool = true;
             else
                 bool = false;
             end
             
             % Increment time for decay
-            obj.time_increment();
+            % obj.time_increment();
         end
         
         function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
@@ -215,7 +215,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             
             % Rate constants
             k1 = 1.6599e6 * exp(-6666.7 / (inputs(temp) + 273.15));
-            k2 = 7.2117e8 * exp(-8333.3 / (inputs(temp) + 273.15));
+            k2 = 7.2117e8 * min(max(1, (obj.time + 80)/100), 1.3) * exp(-8333.3 / (inputs(temp) + 273.15));
             k3 = 2.6745e12 * exp(-11111 / (inputs(temp) + 273.15));
             
             % Rates of reaction
