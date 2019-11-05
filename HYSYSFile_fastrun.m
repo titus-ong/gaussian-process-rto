@@ -190,7 +190,7 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
                     obj.set_param(field{idx}, inputs(point, idx));
                 end
                 
-                obj.energy_stream.Item('Cooling water').HeatFlowvalue=500;
+                obj.energy_stream.Item('Cooling water').HeatFlowvalue=-500/3600;
                 
                 obj.start_solver();
                 

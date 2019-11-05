@@ -1,11 +1,10 @@
 % Run example script first to get GP variable in workspace
-hysys = HYSYSFile_fastrun();
 rows = 16;
 cols = 31;
 x1 = linspace(hysys.lb(1), hysys.ub(1), cols);
 x2 = linspace(hysys.lb(2), hysys.ub(2), rows);
 temp_GP = copy(GP);
-model_idx = 20;
+model_idx = 2;
 temp_GP.model = temp_GP.model(1:model_idx);
 
 data = zeros(rows, cols);
@@ -17,4 +16,5 @@ end
 
 f = figure;
 hold on;
-contour(x1, x2, data, 30)
+surf(x1, x2, data)
+scatter(temp_GP.training_input(1:6,1), temp_GP.training_input(1:6,2));
