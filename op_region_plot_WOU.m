@@ -1,5 +1,5 @@
 WO = WilliamsOttoUnconstrained();
-WO.time = 1000;
+WO.time = 0;
 rows = 30;
 cols = 31;
 x1 = linspace(WO.lb(1), WO.ub(1), cols);  % Flowrate of B

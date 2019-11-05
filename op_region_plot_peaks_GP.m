@@ -4,7 +4,7 @@ cols = 31;
 x1 = linspace(Pks.lb(1), Pks.ub(1), cols);  % Flowrate of B
 x2 = linspace(Pks.lb(2), Pks.ub(2), rows);  % Temp of reactor
 temp_GP = copy(GP);
-model_idx = 2;
+model_idx = 12;
 temp_GP.model = temp_GP.model(model_idx);
 
 data = zeros(rows, cols);
