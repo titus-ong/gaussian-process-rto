@@ -1,4 +1,4 @@
-excel = "\fast run results.xlsx";
+excel = "\fast run results - Copy.xlsx";
 rows = 21;  % No. of intervals of reboiler_duty
 cols = 21;  % No. of intervals of sour_gas
 
