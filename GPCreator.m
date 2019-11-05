@@ -225,7 +225,8 @@ classdef GPCreator  < handle
         end
         
         function plot2d_indiv(obj)
-            obj.system.op_region_script();
+            % obj.system.op_region_script();
+            figure
             hold on;
             
             idx = size(obj.centre, 1);
