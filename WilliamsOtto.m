@@ -93,7 +93,11 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             
             % Inequality constraints
             for i = 1:length(obj.constraints_ineq)
-                c(i) = predict(par.model.(obj.constraints_ineq{i}), x);
+                c(i) = predict(par.model.(obj.constraints_ineq{i}), ( ...
+                    x - par.values_adj.input.mean) ./ par.values_adj.input.std ...
+                    ) ...
+                    / par.values_adj.(obj.constraints_ineq{i}).std ...
+                    + par.values_adj.(obj.constraints_ineq{i}).mean;
             end
             
             % Point is within delta - must be the final equation!
@@ -103,13 +107,18 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             ceq = zeros(length(obj.constraints_eq), 1);
             % Equality constraints
             for i = 1:length(obj.constraints_eq)
-                ceq(i) = predict(par.model.(obj.constraints_eq{i}), x);
+                ceq(i) = predict(par.model.(obj.constraints_eq{i}), ( ...
+                    x - par.values_adj.input.mean) ./ par.values_adj.input.std ...
+                    ) ...
+                    / par.values_adj.(obj.constraints_eq{i}).std ...
+                    + par.values_adj.(obj.constraints_eq{i}).mean;
             end
         end
         
         function par = create_par(obj, GPobj, idx)
             % Create parameters for fmincon (used in nonlin_fn)
             par.model = GPobj.model(end);
+            par.values_adj = GPobj.values_adj;
             par.centre = GPobj.centre(idx, :);
             par.delta = obj.delta;
             par.delta_norm = cell2mat(struct2cell(obj.delta_norm))';

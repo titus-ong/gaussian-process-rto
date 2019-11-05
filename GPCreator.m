@@ -14,6 +14,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         
         training_input          % Training input data
         training_output         % Training output data
+        values_adj              % Mean, std and normalised values
         
         centre                  % Centre matrix
         delta                   % Delta matrix
@@ -59,24 +60,41 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.forget = false;
         end
         
-        function obj = update_model(obj)            
-            % Initialise GP model
+        function obj = update_model(obj)  
+            % Initialise or update model
             idx = size(obj.model, 2) + 1;
             if idx == 2  % model is empty
                 idx = 1;  % So model fills up from first row
             end
+            obj.values_adj.input.mean = mean(obj.training_input);
+            obj.values_adj.input.std = std(obj.training_input);
+            obj.values_adj.input.norm = normalize(obj.training_input);
             
+            % Objective model
+            obj.values_adj.objective.mean = mean(obj.training_output.objective);
+            obj.values_adj.objective.std = std(obj.training_output.objective);
+            obj.values_adj.objective.norm = normalize(obj.training_output.objective);
             obj.model(idx).objective = fitrgp( ...
-                obj.training_input, obj.training_output.objective ...
+                obj.values_adj.input.norm, obj.values_adj.objective.norm ...
                 );
+            
+            % Inequality constraints models
             for i = 1:size(obj.training_output.con_ineq, 2)
+                obj.values_adj.(obj.con_ineq{i}).mean = mean(obj.training_output.con_ineq(:, i));
+                obj.values_adj.(obj.con_ineq{i}).std = std(obj.training_output.con_ineq(:, i));
+                obj.values_adj.(obj.con_ineq{i}).norm = normalize(obj.training_output.con_ineq(:, i));
                 obj.model(idx).(obj.con_ineq{i}) = fitrgp( ...
-                    obj.training_input, obj.training_output.con_ineq(:, i) ...
+                    obj.values_adj.input.norm, obj.values_adj.(obj.con_ineq{i}).norm ...
                     );
             end
+            
+            % Equality constraints models
             for i = 1:size(obj.training_output.con_eq, 2)
+                obj.values_adj.(obj.con_eq{i}).mean = mean(obj.training_output.con_eq(:, i));
+                obj.values_adj.(obj.con_eq{i}).std = std(obj.training_output.con_eq(:, i));
+                obj.values_adj.(obj.con_eq{i}).norm = normalize(obj.training_output.con_eq(:, i));
                 obj.model(idx).(obj.con_eq{i}) = fitrgp( ...
-                    obj.training_input, obj.training_output.con_eq(:, i) ...
+                    obj.values_adj.input.norm, obj.values_adj.(obj.con_eq{i}).norm ...
                     );
             end
         end
@@ -88,13 +106,22 @@ classdef GPCreator  < matlab.mixin.Copyable
             inaccurate = true;
             while size(obj.training_input, 1) > 10 && inaccurate
                 % Initialise short GP model
-                model_short = fitrgp( ...
-                    obj.training_input(2:end, :), obj.training_output.objective(2:end) ...
-                );
-                objective_short = predict(model_short, (obj.opt_min(end, :)));
-                
-                % Get predicted objective - long and short
-                objective_long = predict(obj.model(end).objective, (obj.opt_min(end, :)));
+                mean_val = mean(obj.training_output.objective(2:end));
+                std_val = std(obj.training_output.objective(2:end));
+                norm_val = normalize(obj.training_output.objective(2:end));
+                mean_input = mean(obj.training_input(2:end, :));
+                std_input = std(obj.training_input(2:end, :));
+                norm_input = normalize(obj.training_input(2:end, :));
+                model_short = fitrgp(norm_input, norm_val);
+            
+                % Get predicted objective
+                objective_short = predict( ...
+                    model_short, ((obj.opt_min(end, :)) - mean_input) ./ std_input ...
+                    ) / std_val + mean_val;
+                objective_long = predict( ...
+                    obj.model(end).objective, ( ...
+                        (obj.opt_min(end, :)) - obj.values_adj.input.mean) ./ obj.values_adj.input.std ...
+                        ) / obj.values_adj.objective.std + obj.values_adj.objective.mean;
             
                 ratio = abs((objective_long - true_objective) / (objective_short - true_objective));
                 
@@ -111,7 +138,10 @@ classdef GPCreator  < matlab.mixin.Copyable
         end        
         
         function objective = obj_fn(obj, x)
-            objective = predict(obj.model(end).objective, x);
+            objective = predict( ...
+                obj.model(end).objective, ( ...
+                    x - obj.values_adj.input.mean) ./ obj.values_adj.input.std ...
+                    ) / obj.values_adj.objective.std + obj.values_adj.objective.mean;
         end
         
         function optimise(obj, iter)
