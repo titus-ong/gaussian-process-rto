@@ -35,7 +35,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         forget                  % Forgetting factor boolean
     end
     properties (Constant)
-        min_TR = 0.1            % Minimum trust region as percentage of original delta
+        min_TR = 0.01            % Minimum trust region as percentage of original delta
         max_TR = 10             % Maximum trust region as percentage of original delta
         eta_low = 0.1           % Rho constant
         eta_high = 0.9          % Rho constant
