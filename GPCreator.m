@@ -63,7 +63,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         function obj = update_model(obj)  
             % Initialise or update model
             idx = size(obj.model, 2) + 1;
-            if idx == 2  % model is empty
+            if isempty(fieldnames(obj.model))  % model is empty
                 idx = 1;  % So model fills up from first row
             end
             obj.values_adj.input.mean = mean(obj.training_input);
@@ -256,8 +256,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         end
         
         function plot2d_indiv(obj)
-            % obj.system.op_region_script();
-            figure
+            obj.system.op_region_script();
             hold on;
             
             idx = size(obj.centre, 1);
