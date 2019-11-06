@@ -4,7 +4,7 @@ cols = 31;
 x1 = linspace(Pks.lb(1), Pks.ub(1), cols);  % Flowrate of B
 x2 = linspace(Pks.lb(2), Pks.ub(2), rows);  % Temp of reactor
 temp_GP = copy(GP);
-model_idx = 12;
+model_idx = 1;
 temp_GP.model = temp_GP.model(model_idx);
 
 data = zeros(rows, cols);
@@ -16,5 +16,5 @@ end
 
 figure
 hold on;
-contour(x1, x2, data, 30)
-scatter(temp_GP.training_input(1:6, 1), temp_GP.training_input(1:6, 2));
+surf(x1, x2, data)
+scatter(temp_GP.training_starter(:,1), temp_GP.training_starter(:,2));
