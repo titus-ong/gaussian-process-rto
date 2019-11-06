@@ -276,7 +276,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 hold on;
             end
             plot(points(:, 1), points(:, 2), '-*');
-            scatter(GP.training_starter(:,1),GP.training_starter(:,2));
+            scatter(obj.training_starter(:,1), obj.training_starter(:,2));
         end
     end
 end
