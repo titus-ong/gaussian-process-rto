@@ -15,6 +15,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         training_input          % Training input data
         training_output         % Training output data
         values_adj              % Mean, std and normalised values
+        training_starter        % Starter training input points
         
         centre                  % Centre matrix
         delta                   % Delta matrix
@@ -47,6 +48,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.con_eq = system.constraints_eq;
             
             obj.training_input = training_input;
+            obj.training_starter = training_input;
             obj.training_output = training_output;
             obj.delta = system.delta_mat;
             obj.centre = obj.training_input(1, :);
@@ -274,6 +276,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 hold on;
             end
             plot(points(:, 1), points(:, 2), '-*');
+            scatter(obj.training_starter(:,1), obj.training_starter(:,2));
         end
     end
 end
