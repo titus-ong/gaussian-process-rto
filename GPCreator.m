@@ -24,15 +24,14 @@ classdef GPCreator  < matlab.mixin.Copyable
         rho                     % Rho matrix
         
         forget                  % Forgetting factor boolean
-    end
-    properties (Constant)
-        min_TR = 0.01            % Minimum trust region as percentage of original delta
-        max_TR = 10             % Maximum trust region as percentage of original delta
-        eta_low = 0.1           % Rho constant
-        eta_high = 0.9          % Rho constant
-        delta_reduction = 0.5   % Reduction in delta when Rho < eta_low
-        delta_expansion = 1.5   % Expansion in delta when Rho > eta_high
-        forgetting_factor = 1.5 % Allowance for inaccuracies in GP due to outdated data
+        
+        min_TR                  % Minimum trust region as percentage of original delta
+        max_TR                  % Maximum trust region as percentage of original delta
+        eta_low                 % Rho constant
+        eta_high                % Rho constant
+        delta_reduction         % Reduction in delta when Rho < eta_low
+        delta_expansion         % Expansion in delta when Rho > eta_high
+        forgetting_factor       % Allowance for inaccuracies in GP due to outdated data
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -47,6 +46,14 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.con_ineq = system.constraints_ineq;
             obj.con_eq = system.constraints_eq;
             
+            obj.min_TR = system.min_TR;
+            obj.max_TR = system.max_TR;
+            obj.eta_low = system.eta_low;
+            obj.eta_high = system.eta_high;
+            obj.delta_reduction = system.delta_reduction;
+            obj.delta_expansion = system.delta_expansion;
+            obj.forgetting_factor = system.forgetting_factor;
+            
             obj.training_input = training_input;
             obj.training_starter = training_input;
             obj.training_output = training_output;
@@ -59,7 +66,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.model = struct();
             obj.update_model();
             
-            obj.forget = false;
+            obj.forget = system.decay;
         end
         
         function obj = update_model(obj)  
