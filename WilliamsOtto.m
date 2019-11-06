@@ -30,6 +30,14 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         lb = [4, 70];                              % Lower bounds
         ub = [7, 100];                             % Upper bounds
         options = optimset('disp','off');          % Options for GP
+
+        min_TR = 0.01                              % Minimum trust region as percentage of original delta
+        max_TR = 10                                % Maximum trust region as percentage of original delta
+        eta_low = 0.1                              % Rho constant
+        eta_high = 0.9                             % Rho constant
+        delta_reduction = 0.5                      % Reduction in delta when Rho < eta_low
+        delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
+        forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
     end
     properties
         init_var = struct( ...
