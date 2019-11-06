@@ -93,7 +93,7 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             objective = outputs(obj.output_fields=="objective_true");
         end
         
-        function [c,ceq] = nonlin_con(~, x, par)
+        function [c,ceq] = nonlin_con(obj, x, par)
             % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
             c = zeros(1 + length(obj.constraints_ineq), 1);
             
