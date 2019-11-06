@@ -10,7 +10,7 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
     end
     properties (Constant)
         cells = struct( ...                        % Cell struct of spreadsheet
-            'solvent_flowrate', 'A1', ...  % Var_name, {input, output}
+            'solvent_flowrate', 'A1', ...          % Var_name, {input, output}
             'reboiler_duty', 'A2', ...
             'inlet_co2_comp', 'A3', ...
             'inlet_gas_flowrate', 'A4', ...
@@ -47,20 +47,30 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         constraints_ineq = [];
         constraints_eq = [];
         output_fields = { ...
-            'objective_true' ...
+            'objective_true', ...
+            'reboiler_duty', ...
+            'e_cooling_water' ...
             };
         linear_con_A = [];                         % Linear inequality constraints LHS (Ax = b)
         linear_con_b = [];                         % Linear inequality constraints LHS
         lineq_con_A = [];                          % Linear equality constraints LHS
         lineq_con_b = [];                          % Linear equality constraints LHS
-        lb = [80000, 40];                     % Lower bounds
-        ub = [200000, 300];                  % Upper bounds
-        options = optimset('disp','off');         % Options for GP - iter or off
+        lb = [80000, 40];                          % Lower bounds
+        ub = [200000, 300];                        % Upper bounds
+        options = optimset('disp','off');          % Options for GP - iter or off
+    
+        min_TR = 0.01                              % Minimum trust region as percentage of original delta
+        max_TR = 10                                % Maximum trust region as percentage of original delta
+        eta_low = 0.1                              % Rho constant
+        eta_high = 0.9                             % Rho constant
+        delta_reduction = 0.5                      % Reduction in delta when Rho < eta_low
+        delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
+        forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
     end
     properties
-        feasible_point_mat                     % Matrix form
-        delta_mat                              % Matrix form
-        op_region_script                       % Function for plotting operating region
+        feasible_point_mat                         % Matrix form
+        delta_mat                                  % Matrix form
+        op_region_script                           % Function for plotting operating region
     end
     methods
         function obj = HYSYSFile_fastrun(filepath, spreadsheet_input, spreadsheet_output) % Constructor method
@@ -187,9 +197,9 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
                 
                 % Get parameters
                 for idx = 1:length(obj.output_fields)
-                    outputs(point) = obj.get_param(obj.output_fields{idx});
+                    outputs(idx) = obj.get_param(obj.output_fields{idx});
                 end
-                
+
                 % Get objective and constraint values
                 objective(point) = obj.objective_value(outputs);
                 for idx = 1:m
