@@ -1,4 +1,5 @@
 Pks = PeaksFunction();
+%Pks.time = 50;
 rows = 16;
 cols = 31;
 x1 = linspace(Pks.lb(1), Pks.ub(1), cols);

@@ -1,7 +1,7 @@
 classdef PeaksFunction  < matlab.mixin.Copyable
     properties (Constant)
         feasible_point = struct( ...
-            "x", -0.33, ...
+            "x", -0.3, ...
             "y", 1 ...
             );
         delta_point = struct( ...
@@ -18,11 +18,20 @@ classdef PeaksFunction  < matlab.mixin.Copyable
         lb = [-3, -3];                             % Lower bounds
         ub = [3, 3];                               % Upper bounds
         options = optimset('disp','off');          % Options for GP
+        
+        min_TR = 0.01                              % Minimum trust region as percentage of original delta
+        max_TR = 10                                % Maximum trust region as percentage of original delta
+        eta_low = 0.1                              % Rho constant
+        eta_high = 0.9                             % Rho constant
+        delta_reduction = 0.5                      % Reduction in delta when Rho < eta_low
+        delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
+        forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data        
     end
     properties
         feasible_point_mat                         % Matrix form
         delta_mat                                  % Matrix form
         decay                                      % Decay boolean
+        forget                                     % Forgetting factor
         time                                       % Pseudo time for decay
         op_region_script                           % Functionf or plotting operation region
     end
@@ -31,6 +40,7 @@ classdef PeaksFunction  < matlab.mixin.Copyable
             obj.feasible_point_mat = cell2mat(struct2cell(obj.feasible_point))';
             obj.delta_mat = cell2mat(struct2cell(obj.delta_point))';
             obj.decay = false;
+            obj.forget = false;
             obj.time = 0;
             obj.op_region_script = @op_region_plot_peaks;
         end
@@ -83,7 +93,7 @@ classdef PeaksFunction  < matlab.mixin.Copyable
 %             par.delta_norm = cell2mat(struct2cell(obj.delta_norm))';
         end
         
-        function bool = system_violated(~, con_ineq, con_eq)
+        function bool = system_violated(obj, con_ineq, con_eq)
             % Test if output violates system constraints
             % Return true if violated, false if not
             tol = 1e-4;
@@ -102,6 +112,9 @@ classdef PeaksFunction  < matlab.mixin.Copyable
                     bool = true;
                 end
             end
+            
+            obj.time_increment();
+            
         end
         
         
@@ -117,7 +130,7 @@ classdef PeaksFunction  < matlab.mixin.Copyable
             % Solve reactor
             for point = 1:n
                 curr_inputs = inputs(point, :);
-                z = peaks(curr_inputs(1), curr_inputs(2));
+                z = peaks(curr_inputs(1), curr_inputs(2)+min(max((obj.time-10)/5,0),1));
                 objective(point) = obj.objective_value(curr_inputs, z);
                 for idx = 1:m
                     val = obj.(obj.constraints_ineq{idx})(curr_inputs, z);
