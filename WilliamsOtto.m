@@ -54,6 +54,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         decay                                      % Decay boolean
         time                                       % Pseudo time for decay
         op_region_script                           % Function for plotting operating region
+        forget                                     % Switch for forgetting factor
     end
     methods
         function obj = WilliamsOtto()
@@ -61,6 +62,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             obj.delta_mat = cell2mat(struct2cell(obj.delta_point))';
             obj.decay = false;
             obj.time = 0;
+            obj.forget = false;
             obj.op_region_script = @op_region_plot_WO;
         end
         
