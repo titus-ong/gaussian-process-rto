@@ -44,31 +44,9 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             "reboiler_duty", 12000, ...
             "inlet_gas_flowrate", 26 ...
             );
+        constraints_ineq = [];
+        constraints_eq = [];
         output_fields = { ...
-            'solvent_flowrate', ... 
-            'reboiler_duty', ...
-            'inlet_co2_comp', ...
-            'inlet_gas_flowrate', ...
-            'clean_gas_co2', ...
-            'p_absorber', ...
-            'pout_absorber', ...
-            'p_stripper', ...
-            'pout_stripper', ...
-            't_condenser', ...
-            't_mea_recycle', ...
-            't_inlet_stripper', ...
-            't_inlet_gas', ...
-            'recycle_co2', ...
-            'recycle_mea', ...
-            'recycle_h2o', ...
-            'e_cooling_water', ...
-            'e_c100', ...
-            'e_c200', ...
-            'e_j100', ...
-            'e_j101', ...
-            'sweet_co2_flowrate', ...
-            'recycle_co2_flowrate', ...
-            'co2_recovery_stripper', ...
             'objective_true' ...
             };
         linear_con_A = [];                         % Linear inequality constraints LHS (Ax = b)
@@ -82,10 +60,6 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
     properties
         feasible_point_mat                     % Matrix form
         delta_mat                              % Matrix form
-        nonlin_con                             % Nonlinear constraints
-        objective_model                        % Objective function for model
-        objective_true                         % Objective function for system
-        system_violation                       % Test for system constraint violation
         op_region_script                       % Function for plotting operating region
     end
     methods
@@ -101,61 +75,68 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             
             obj.feasible_point_mat = cell2mat(struct2cell(obj.feasible_point))';
             obj.delta_mat = cell2mat(struct2cell(obj.delta))';
-            obj.nonlin_con = @(x, centre, delta, model, mean_x, std_x, mean_y, std_y) ...
-                obj.nonlin_fn(x, centre, delta, model, mean_x, std_x, mean_y, std_y);
-            obj.objective_model = @(x, model, mean_x, std_x, mean_y, std_y) ...
-                obj.model_obj_fn(x, model, mean_x, std_x, mean_y, std_y);
-            obj.objective_true = @(x) obj.true_obj_fn(x);
-            obj.system_violation = @(y) obj.system_violated(y);
             obj.op_region_script = @op_region_plot_hysys;
         end
         
-        function [c,ceq] = nonlin_fn(~, x, centre, delta, model, mean_x, std_x, mean_y, std_y)
-            % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
-            
-            % Point is within delta
-            c(1) = sum((x - centre).^2 ./ delta.^2) - 1;
-            
-            % Clean [CO2] from absorber
-%             function percentage = co2_fn(x, model, mean_x, std_x, mean_y, std_y)
-% %                 logic_arr = (obj.output_fields=="clean_gas_co2");
-%                 predicted = predict(model(end).clean_gas_co2, x);
-% %                 predicted = predict( ...
-% %                     model.clean_gas_co2, (x - mean_x) ./ std_x ...
-% %                         ) .* std_y(logic_arr) + mean_y(logic_arr);
-%                 percentage = predicted - 0.003;
-%             end
-% 
-%             c(2) = co2_fn(x, model, mean_x, std_x, mean_y, std_y);
-%             
-             ceq = [];
-        end
-        
-        function bool = system_violated(obj, output)
-            % Test if output violates system constraints
-            % Return true if violated, false if not
-            bool = false;
-        end
-        
-        function objective = model_obj_fn(obj, x, model, mean_x, std_x, mean_y, std_y)
-            % Calculate objective function for model
-            outputs = zeros(1, length(obj.output_fields));
-            for i = 1:length(obj.output_fields)
-%                 outputs(i) = predict(model(i), (x - mean_x) ./ std_x) .* std_y(i) + mean_y(i);
-                outputs(i) = predict(model(end).(obj.output_fields{i}), x);
-            end
-            objective = obj.calc_objective(outputs);
-        end
-        
-        function objective = true_obj_fn(obj, x)
-            % Calculate objective function for system
-            [outputs, ~] = obj.get_output(x);
-            objective = obj.calc_objective(outputs);
-        end
-        
-        function objective = calc_objective(obj, outputs)
+        function objective = objective_value(obj, outputs)
             % Calculate objective function from outputs
             objective = outputs(obj.output_fields=="objective_true");
+        end
+        
+        function [c,ceq] = nonlin_con(~, x, par)
+            % Nonlinear inequality (c<=0) and equality (ceq=0) constraints on x
+            c = zeros(1 + length(obj.constraints_ineq), 1);
+            
+            % Inequality constraints
+            for i = 1:length(obj.constraints_ineq)
+                c(i) = predict(par.model.(obj.constraints_ineq{i}), ( ...
+                    x - par.values_adj.input.mean) ./ par.values_adj.input.std ...
+                    ) ...
+                    * par.values_adj.(obj.constraints_ineq{i}).std ...
+                    + par.values_adj.(obj.constraints_ineq{i}).mean;
+            end
+            
+            % Point is within delta - must be the final equation!
+            c(end) = sum((x - par.centre) .^ 2 ./ par.delta .^ 2) - 1;
+            
+            ceq = zeros(length(obj.constraints_eq), 1);
+            % Equality constraints
+            for i = 1:length(obj.constraints_eq)
+                ceq(i) = predict(par.model.(obj.constraints_eq{i}), ( ...
+                    x - par.values_adj.input.mean) ./ par.values_adj.input.std ...
+                    ) ...
+                    * par.values_adj.(obj.constraints_eq{i}).std ...
+                    + par.values_adj.(obj.constraints_eq{i}).mean;
+            end
+        end
+        
+        function par = create_par(~, GPobj, idx)
+            % Create parameters for fmincon (used in nonlin_fn)
+            par.model = GPobj.model(end);
+            par.values_adj = GPobj.values_adj;
+            par.centre = GPobj.centre(idx, :);
+            par.delta = GPobj.delta(idx, :);
+        end
+        
+        function bool = system_violated(~, con_ineq, con_eq)
+            % Test if output violates system constraints
+            % Return true if violated, false if not
+            tol = 1e-4;
+            bool = false;
+            
+            % Check inequality constraints
+            for i = 1:length(con_ineq)
+                if con_ineq(i) > 0
+                    bool = true;
+                end
+            end
+            
+            % Check equality constraints
+            for i = 1:length(con_eq)
+                if abs(con_eq(i)) > tol
+                    bool = true;
+                end
+            end
         end
         
         function value = get_param(obj, parameter)
@@ -178,9 +159,19 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             obj.solver.CanSolve = 1;
         end
         
-        function [outputs, outputs_struct] = get_output(obj, inputs)
+        function [objective, con_ineq, con_eq] = get_output(obj, inputs)
             % Get output values from HYSYS spreadsheet using given inputs
-            outputs_struct = struct();
+            % and calculate objective function and constraint values
+            
+            % Pre-allocation
+            outputs = zeros(length(obj.output_fields), 1);
+            n = size(inputs, 1);
+            m = length(obj.constraints_ineq);
+            k = length(obj.constraints_eq);
+            objective = zeros(n, 1);
+            con_ineq = zeros(n, m);
+            con_eq = zeros(n, k);
+            
             for point = 1:size(inputs, 1)
                 obj.stop_solver();
                 
@@ -190,18 +181,25 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
                     obj.set_param(field{idx}, inputs(point, idx));
                 end
                 
-                obj.energy_stream.Item('Cooling water').HeatFlowvalue=-500/3600;
+                obj.energy_stream.Item('Cooling water').HeatFlowvalue = -500/3600;
                 
                 obj.start_solver();
                 
                 % Get parameters
                 for idx = 1:length(obj.output_fields)
-                    outputs_struct(point).(obj.output_fields{idx}) = obj.get_param(obj.output_fields{idx});
+                    outputs(point) = obj.get_param(obj.output_fields{idx});
                 end
-            end
-            outputs = squeeze(cell2mat(struct2cell(outputs_struct)));
-            if size(outputs, 2) ~= length(obj.output_fields)
-                outputs = outputs';
+                
+                % Get objective and constraint values
+                objective(point) = obj.objective_value(outputs);
+                for idx = 1:m
+                    val = obj.(obj.constraints_ineq{idx})(outputs);
+                    con_ineq(point, idx) = val;
+                end
+                for idx = 1:k
+                    val = obj.(obj.constraints_eq{idx})(curr_inputs, x);
+                    con_eq(point, idx) = val;
+                end
             end
         end
     end
