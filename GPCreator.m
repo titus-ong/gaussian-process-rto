@@ -66,7 +66,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.model = struct();
             obj.update_model();
             
-            obj.forget = system.decay;
+            if isprop(system, "decay")
+                obj.forget = system.decay;
+            end
         end
         
         function obj = update_model(obj)  
