@@ -7,13 +7,13 @@ x = linspace(80000, 200000, 21);
 y = linspace(40, 300, 21);
 
 % Objective
-z1 = plot_columns(data_grid, rows, cols, 27);
+z1 = plot_columns(data_grid, rows, cols, 27)';
 % Min
 [~,i] = min(z1(:));
 [row,col] = ind2sub(size(z1), i);
 
 % CO2% in clean gas
-z2 = plot_columns(data_grid, rows, cols, 7);
+z2 = plot_columns(data_grid, rows, cols, 7)';
 
 figure
 hold on;
