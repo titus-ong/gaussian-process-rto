@@ -1,7 +1,7 @@
 classdef PeaksFunction  < matlab.mixin.Copyable
     properties (Constant)
         feasible_point = struct( ...
-            "x", -0.3, ...
+            "x", -0.5, ...
             "y", 1 ...
             );
         delta_point = struct( ...
@@ -130,7 +130,7 @@ classdef PeaksFunction  < matlab.mixin.Copyable
             % Solve reactor
             for point = 1:n
                 curr_inputs = inputs(point, :);
-                z = peaks(curr_inputs(1), curr_inputs(2)+min(max((obj.time-10)/5,0),1));
+                z = peaks(curr_inputs(1), curr_inputs(2)+min(max((obj.time)/3,0),1));
                 objective(point) = obj.objective_value(curr_inputs, z);
                 for idx = 1:m
                     val = obj.(obj.constraints_ineq{idx})(curr_inputs, z);
