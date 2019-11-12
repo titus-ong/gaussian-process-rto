@@ -127,7 +127,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         function par = create_par(~, GPobj, idx)
             % Create parameters for fmincon (used in nonlin_fn)
             par.model = GPobj.model(end);
-            par.values_adj = GPobj.values_adj;
+            par.values_adj = GPobj.values_adj(end);
             par.centre = GPobj.centre(idx, :);
             par.delta = GPobj.delta(idx, :);
 %             par.delta_norm = cell2mat(struct2cell(obj.delta_norm))';
