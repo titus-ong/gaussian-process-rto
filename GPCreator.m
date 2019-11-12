@@ -157,6 +157,21 @@ classdef GPCreator  < matlab.mixin.Copyable
                     ) * obj.values_adj(end).objective.std + obj.values_adj(end).objective.mean;
         end
         
+        function bool = should_excite(obj, idx)
+            tol = 1e-2;
+            grad_prev = obj.centre(idx - 1, :) - obj.centre(idx - 2, :);
+            unit_prev = grad_prev ./ norm(grad_prev);
+            grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
+            unit_curr = grad_curr ./ norm(grad_curr);
+            x_pdt = cross(unit_prev, unit_curr);
+            vec_len = norm(x_pdt);
+            if abs(vec_len) < tol
+                bool = true;
+            else
+                bool = false;
+            end
+        end
+        
         function optimise(obj, iter)
             % Pre-allocation
             cols = size(obj.centre, 2);
