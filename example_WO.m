@@ -6,11 +6,9 @@ WO = WilliamsOtto();
 %% Initialising Points for Training
 pointer = Pointer(WO.feasible_point_mat, WO.delta_mat);
 sample_points = pointer.random_sampling();
-% Fb = [6.9000, 7.1722, 6.8980, 6.6067, 6.8077, 6.7585]';
-% Tr = [83.0000, 84.7575, 80.9491, 83.9705, 80.2874, 81.9378]';
-% sample_points = [Fb, Tr];
-% Fb   = [6.9,5.7,6.35, 6.6, 6.75]';%
-% Tr   = [83,74,74.9,75,79]';%
+% Sample points that get stuck:
+% Fb = [6.9000, 6.6992, 6.9780, 6.9399, 6.7452, 6.7390]';
+% Tr = [83.0000, 80.8881, 84.2125, 82.8227, 79.7888, 83.2433]';
 % sample_points = [Fb, Tr];
 [objective, con_ineq, con_eq] = WO.get_output(sample_points);
 outputs = struct();
@@ -21,7 +19,7 @@ outputs.con_eq = con_eq;
 GP = GPCreator(WO, sample_points, outputs);
 
 %% Optimisation
-iter = 20;
+iter = 10;
 GP.optimise(iter);
 % for i = 1:20
 %     GP.optimise(1);
