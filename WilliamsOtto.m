@@ -31,13 +31,14 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         ub = [7, 100];                             % Upper bounds
         options = optimset('disp','off');          % Options for GP
 
-        min_TR = 0.01                              % Minimum trust region as percentage of original delta
+        min_TR = 0.1                              % Minimum trust region as percentage of original delta
         max_TR = 10                                % Maximum trust region as percentage of original delta
         eta_low = 0.1                              % Rho constant
         eta_high = 0.9                             % Rho constant
         delta_reduction = 0.5                      % Reduction in delta when Rho < eta_low
         delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
+        constraint_tol = 1e-3                      % Tolerance when system constraint is violated
     end
     properties
         init_var = struct( ...
@@ -131,27 +132,6 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             par.centre = GPobj.centre(idx, :);
             par.delta = GPobj.delta(idx, :);
 %             par.delta_norm = cell2mat(struct2cell(obj.delta_norm))';
-        end
-        
-        function bool = system_violated(~, con_ineq, con_eq)
-            % Test if output violates system constraints
-            % Return true if violated, false if not
-            tol = 1e-4;
-            bool = false;
-            
-            % Check inequality constraints
-            for i = 1:length(con_ineq)
-                if con_ineq(i) > 0
-                    bool = true;
-                end
-            end
-            
-            % Check equality constraints
-            for i = 1:length(con_eq)
-                if abs(con_eq(i)) > tol
-                    bool = true;
-                end
-            end
         end
         
         function [objective, con_ineq, con_eq] = get_output(obj, inputs)

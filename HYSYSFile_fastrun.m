@@ -71,6 +71,7 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         delta_reduction = 0.5                      % Reduction in delta when Rho < eta_low
         delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
+        constraint_tol = 1e-3                      % Tolerance when system constraint is violated
     end
     properties
         feasible_point_mat                         % Matrix form
@@ -137,27 +138,6 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             par.values_adj = GPobj.values_adj(end);
             par.centre = GPobj.centre(idx, :);
             par.delta = GPobj.delta(idx, :);
-        end
-        
-        function bool = system_violated(~, con_ineq, con_eq)
-            % Test if output violates system constraints
-            % Return true if violated, false if not
-            tol = 1e-4;
-            bool = false;
-            
-            % Check inequality constraints
-            for i = 1:length(con_ineq)
-                if con_ineq(i) > 0
-                    bool = true;
-                end
-            end
-            
-            % Check equality constraints
-            for i = 1:length(con_eq)
-                if abs(con_eq(i)) > tol
-                    bool = true;
-                end
-            end
         end
         
         function value = get_param(obj, parameter)
