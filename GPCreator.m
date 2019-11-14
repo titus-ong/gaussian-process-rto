@@ -32,6 +32,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         delta_reduction         % Reduction in delta when Rho < eta_low
         delta_expansion         % Expansion in delta when Rho > eta_high
         forgetting_factor       % Allowance for inaccuracies in GP due to outdated data
+        constraint_tol          % Tolerance when system constraint is violated
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -53,6 +54,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.delta_reduction = system.delta_reduction;
             obj.delta_expansion = system.delta_expansion;
             obj.forgetting_factor = system.forgetting_factor;
+            obj.constraint_tol = system.constraint_tol;
             
             obj.training_input = training_input;
             obj.training_starter = training_input;
@@ -148,7 +150,27 @@ classdef GPCreator  < matlab.mixin.Copyable
                     inaccurate = false;
                 end
             end
-        end        
+        end       
+        
+        function bool = system_violated(obj, con_ineq, con_eq)
+            % Test if output violates system constraints
+            % Return true if violated, false if not
+            bool = false;
+            
+            % Check inequality constraints
+            for i = 1:length(con_ineq)
+                if con_ineq(i) > obj.constraint_tol
+                    bool = true;
+                end
+            end
+            
+            % Check equality constraints
+            for i = 1:length(con_eq)
+                if abs(con_eq(i)) > obj.constraint_tol
+                    bool = true;
+                end
+            end
+        end 
         
         function objective = obj_fn(obj, x)
             objective = predict( ...
@@ -158,6 +180,8 @@ classdef GPCreator  < matlab.mixin.Copyable
         end
         
         function bool = should_excite(obj, idx)
+            % Check if past two gradients have been close to parallel
+            % Excite if parallel within tolerance
             tol = 1e-2;
             grad_prev = obj.centre(idx - 1, :) - obj.centre(idx - 2, :);
             unit_prev = grad_prev ./ norm(grad_prev);
@@ -244,7 +268,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
             
-                if obj.system.system_violated(ineq, eq)
+                if obj.system_violated(ineq, eq)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
