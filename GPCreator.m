@@ -321,7 +321,7 @@ classdef GPCreator  < matlab.mixin.Copyable
 %                 obj.opt_min(i, :) = opt_points(idx, :);
                 
                 % Excite or optimise
-                if obj.should_excite(i-1)
+                if obj.should_excite(i-1) && ~obj.excited(i-1)  % Avoid excitation if previous iter was excited
                     points = obj.get_excited_points(i-1, obj.dir_vec);
                     feasible = zeros(0, 2);
                     for j = 1:size(points, 1)
