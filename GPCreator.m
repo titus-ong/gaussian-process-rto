@@ -318,18 +318,31 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % Excite or optimise
                 if obj.should_excite(i-1)
                     points = obj.get_excited_points(i-1, obj.dir_vec);
+                    feasible = zeros(0, 2);
                     for j = 1:size(points, 1)
                         [ineq, eq] = obj.model_con(points(j, :));
                         if obj.system_violated(ineq, eq)
+                            % Violate system constraints
                             continue
                         elseif sum(points(j, :) > obj.ub) || sum(points(j, :) < obj.lb)
+                            % Violate lower/upper bounds
                             continue
+                        else
+                            % Feasible point
+                            rw = size(feasible, 1) + 1;
+                            feasible(rw, 1) = j;
+                            feasible(rw, 2) = func_obj(points(j, :));
                         end
-                        obj.fval_min(i) = func_obj(points(j, :));
-                        obj.opt_min(i, :) = points(j, :);
-                        obj.excited(i) = true;
+                    end
+                    if isempty(feasible)
+                        % No feasible points found
                         break
                     end
+                    % Find optimal feasible point
+                    [rw, ~] = find(feasible(:, 2)==max(feasible(:, 2)));
+                    obj.fval_min(i) = feasible(rw, 2);
+                    obj.opt_min(i, :) = points(feasible(rw, 1), :);
+                    obj.excited(i) = true;
                 end
                 if ~logical(obj.fval_min(i))
                     % Optimise using fmincon
