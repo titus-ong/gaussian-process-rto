@@ -39,6 +39,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         delta_expansion = 1.5                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
+        excite_tol = 1e-2                          % Tolerance of points being aligned for excitation
     end
     properties
         init_var = struct( ...
