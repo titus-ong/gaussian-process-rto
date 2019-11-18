@@ -15,21 +15,23 @@ z1 = plot_columns(data_grid, rows, cols, 27)';
 % CO2% in clean gas
 z2 = plot_columns(data_grid, rows, cols, 7)';
 
+% 3D plot
 figure
 hold on;
 surf(x, y, z1)
 h = scatter3(x(col),y(row),z1(i),'r', 'filled');
 
+% 2D plot
 figure
 hold on;
 contour(x, y, z1, 20)
 scatter(x(col),y(row),'rx');
 % Draw CO2% contour
-[one_perc, h] = contour(x, y, z2, [0.01 0.01]);
-clabel(one_perc, h)
-[two_perc, h] = contour(x, y, z2, [0.02 0.02]);
-clabel(two_perc, h)
-[three_perc, h] = contour(x, y, z2, [0.03 0.03]);
+% [one_perc, h] = contour(x, y, z2, [0.01 0.01]);
+% clabel(one_perc, h)
+% [two_perc, h] = contour(x, y, z2, [0.02 0.02]);
+% clabel(two_perc, h)
+[three_perc, h] = contour(x, y, z2, [0.03 0.03], 'k-');
 clabel(three_perc, h)
 
 function [z] = plot_columns(data_grid, rows, cols, column)
