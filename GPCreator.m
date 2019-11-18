@@ -383,12 +383,16 @@ classdef GPCreator  < matlab.mixin.Copyable
                 obj.rho(i) = ( ...
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
+                new_is_worse = (true_curr - true_last) > 0;
             
                 if obj.system_violated(ineq, eq)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
+                elseif new_is_worse
+                    obj.centre(i, :) = obj.centre(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;                    
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
