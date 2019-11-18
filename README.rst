@@ -6,7 +6,7 @@ Steady state real time optimisation using Gaussian processes to model systems
 
 This repository contains MATLAB files for performing real time optimisation using Gaussian processes. The Gaussian process model is created using MATLAB's fitrgp function, and optimised using MATLAB's fmincon function. 
 
-An example script `example_hysys.m </example_hysys.m>`_ is provided to show optimisation performed on the HYSYS file `testing.hsc </testing.hsc>`_.
+A simple optimisation problem, the Williams Otto reactor, is optimised in `example_WO.m </example_WO.m>`_. The model is shown to be applicable to more complicated flowsheets, exemplified in `example_hysys_fastrun.m </example_hysys_fastrun.m>`_ to optimise the HYSYS file `fast run.hsc </fast run.hsc>`_.
 
 -----
 To-Do
@@ -14,12 +14,9 @@ To-Do
 
 MATLAB:
 
-- Forgetting factor for unconstrained problem
-- Forgetting factor for expanding constraint (and shrinking)
-- Normalise data
 - Change TR radius with reduced gradient
-- Put GP parameters into system files
-- Change GP to model obj and constraints
+- Save plots for excitation/no excitation, forgetting factor/no forgetting factor
+- Expand to three variables (solvent flowrate, reboiler duty, inlet gas flowrate)
 
 HYSYS:
 
