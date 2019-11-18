@@ -26,6 +26,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         excited                 % Logical array of whether point is an excited point
         
         forget                  % Forgetting factor boolean
+        excite                  % Excite boolean
         
         min_TR                  % Minimum trust region as percentage of original delta
         max_TR                  % Maximum trust region as percentage of original delta
@@ -78,6 +79,8 @@ classdef GPCreator  < matlab.mixin.Copyable
             else
                 obj.forget = false;
             end
+            
+            obj.excite = true;
         end
         
         function obj = update_model(obj)  
@@ -206,6 +209,8 @@ classdef GPCreator  < matlab.mixin.Copyable
             % Check if past two gradients have been close to parallel
             % Excite if parallel within tolerance
             if idx < 3
+                bool = false;
+            elseif ~obj.excite
                 bool = false;
             else
                 grad_prev = obj.centre(idx - 1, :) - obj.centre(idx - 2, :);
@@ -433,11 +438,11 @@ classdef GPCreator  < matlab.mixin.Copyable
                 h = points(i, 1);
                 k = points(i, 2);
                 ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
-                fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)]);
+                fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)], '--b');
                 hold on;
             end
-            plot(points(:, 1), points(:, 2), '-*');
-            scatter(obj.training_starter(:,1), obj.training_starter(:,2));
+            plot(points(:, 1), points(:, 2), '-b*');
+            scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+r');
         end
     end
 end
