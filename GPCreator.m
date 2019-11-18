@@ -334,15 +334,14 @@ classdef GPCreator  < matlab.mixin.Copyable
                             feasible(rw, 2) = func_obj(points(j, :));
                         end
                     end
-                    if isempty(feasible)
-                        % No feasible points found
-                        break
+                    if ~isempty(feasible)
+                        % Find optimal feasible point
+                        [rw, ~] = find(feasible(:, 2)==max(feasible(:, 2)));
+                        rw = rw(1);  % If there are duplicate optimas
+                        obj.fval_min(i) = feasible(rw, 2);
+                        obj.opt_min(i, :) = points(feasible(rw, 1), :);
+                        obj.excited(i) = true;
                     end
-                    % Find optimal feasible point
-                    [rw, ~] = find(feasible(:, 2)==max(feasible(:, 2)));
-                    obj.fval_min(i) = feasible(rw, 2);
-                    obj.opt_min(i, :) = points(feasible(rw, 1), :);
-                    obj.excited(i) = true;
                 end
                 if ~logical(obj.fval_min(i))
                     % Optimise using fmincon
