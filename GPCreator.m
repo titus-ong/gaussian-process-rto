@@ -22,6 +22,8 @@ classdef GPCreator  < matlab.mixin.Copyable
         fval_min                % GP objective function value matrix
         opt_min                 % Optimal point matrix
         rho                     % Rho matrix
+        dir_vec                 % Directional vector of current gradient
+        excited                 % Logical array of whether point is an excited point
         
         forget                  % Forgetting factor boolean
         
@@ -33,6 +35,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         delta_expansion         % Expansion in delta when Rho > eta_high
         forgetting_factor       % Allowance for inaccuracies in GP due to outdated data
         constraint_tol          % Tolerance when system constraint is violated
+        excite_tol              % Tolerance of points being aligned for excitation
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -55,6 +58,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.delta_expansion = system.delta_expansion;
             obj.forgetting_factor = system.forgetting_factor;
             obj.constraint_tol = system.constraint_tol;
+            obj.excite_tol = system.excite_tol;
             
             obj.training_input = training_input;
             obj.training_starter = training_input;
@@ -64,6 +68,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.fval_min(1) = 0;
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
+            obj.excited = zeros();
             
             obj.model = struct();
             obj.update_model();
@@ -179,21 +184,95 @@ classdef GPCreator  < matlab.mixin.Copyable
                     ) * obj.values_adj(end).objective.std + obj.values_adj(end).objective.mean;
         end
         
+        function [con_ineq, con_eq] = model_con(obj, x)
+            con_ineq = zeros(size(obj.training_output.con_ineq, 2), 1);
+            for i = 1:size(con_ineq, 1)
+                con_ineq(i) = predict( ...
+                    obj.model(end).(obj.con_ineq{i}), ...
+                        (x - obj.values_adj(end).input.mean) ./ obj.values_adj(end).input.std ...
+                        ) * obj.values_adj(end).(obj.con_ineq{i}).std + obj.values_adj(end).(obj.con_ineq{i}).mean;
+            end
+            
+            con_eq = zeros(size(obj.training_output.con_eq, 2), 1);
+            for i = 1:size(con_eq, 1)
+                con_eq(i) = predict( ...
+                    obj.model(end).(obj.con_eq{i}), ...
+                        (x - obj.values_adj(end).input.mean) ./ obj.values_adj(end).input.std ...
+                        ) * obj.values_adj(end).(obj.con_eq{i}).std + obj.values_adj(end).(obj.con_eq{i}).mean;
+            end
+        end
+        
         function bool = should_excite(obj, idx)
             % Check if past two gradients have been close to parallel
             % Excite if parallel within tolerance
-            tol = 1e-2;
-            grad_prev = obj.centre(idx - 1, :) - obj.centre(idx - 2, :);
-            unit_prev = grad_prev ./ norm(grad_prev);
-            grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
-            unit_curr = grad_curr ./ norm(grad_curr);
-            x_pdt = cross(unit_prev, unit_curr);
-            vec_len = norm(x_pdt);
-            if abs(vec_len) < tol
-                bool = true;
-            else
+            if idx < 3
                 bool = false;
+            else
+                grad_prev = obj.centre(idx - 1, :) - obj.centre(idx - 2, :);
+                unit_prev = grad_prev ./ norm(grad_prev);
+                grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
+                unit_curr = grad_curr ./ norm(grad_curr);
+                if length(unit_prev) < 3
+                    vec_len = unit_prev(1)*unit_curr(2) - unit_prev(2)*unit_curr(1);
+                else
+                    x_pdt = cross(unit_prev, unit_curr);
+                    vec_len = norm(x_pdt);
+                end
+                if abs(vec_len) < obj.excite_tol
+                    bool = true;
+                elseif sum(isnan(unit_prev)) && sum(isnan(unit_curr))
+                    bool = true;
+                else
+                    bool = false;
+                end
+                obj.dir_vec = unit_curr;
             end
+        end
+        
+        function excited = get_excited_points(obj, idx, direction_vec)
+            % Get excited points given previous direction vector and
+            % current centre
+            if sum(isnan(direction_vec))
+                excited = obj.stationary(idx);
+            else
+                excited = obj.straight_line(idx, direction_vec);
+            end
+        end
+        
+        function excited = stationary(obj, idx)
+            % Find a random point within the trust region from the centre
+            pointer = Pointer(obj.centre(idx, :), obj.delta(idx, :), obj.lb, obj.ub);
+            point_list = pointer.random_sampling(1);
+            excited = point_list(2, :);  % point_list's first point is the centre
+        end
+        
+        function excited = straight_line(obj, idx, direction_vec)
+            % Find n points that are orthogonal to direction vector and are
+            % within delta, where n is the number of dimensions
+            
+            vec_dim = length(direction_vec);
+            excited = zeros(vec_dim, size(obj.centre, 2));
+            for element_no = 1:vec_dim
+                % Get orthogonal vector of e.g. [1, 1, x]
+                vec_magnitude = 0;
+                for i = 1:vec_dim
+                    if i == element_no
+                        continue
+                    end
+                    vec_magnitude = vec_magnitude + direction_vec(i);
+                end
+                last_element = -vec_magnitude / direction_vec(element_no);
+                vec_ortho = ones(1, vec_dim);
+                vec_ortho(element_no) = last_element;
+
+                % Find magnitude of direction vector that will produce the
+                % furthest excited point
+                squared_x = 1 / sum(vec_ortho .^ 2 ./ obj.delta(idx, :) .^ 2);
+                x = sqrt(squared_x);
+
+                excited(element_no, :) = obj.centre(idx, :) + x * vec_ortho;
+            end
+            % Include negatives!
         end
         
         function optimise(obj, iter)
@@ -205,9 +284,10 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.fval_min = [obj.fval_min; zeros(iter, 1)];
             obj.opt_min = [obj.opt_min; zeros(iter, cols)];
             obj.rho = [obj.rho; zeros(iter, 1)];
+            obj.excited = [obj.excited; zeros(iter, 1)];
             
             % Initialise
-            pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
+            % pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
             true_last = obj.system.get_output(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
@@ -234,15 +314,34 @@ classdef GPCreator  < matlab.mixin.Copyable
 %                 % Get lowest (local) optima out of the starting points
 %                 [obj.fval_min(i), idx] = min(fvals);
 %                 obj.opt_min(i, :) = opt_points(idx, :);
-
-                % Optimise using fmincon
-                [opt, fval] = fmincon( ...
-                    func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
-                    obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
-                    obj.lb, obj.ub, nonlin_con, obj.options, par ...
-                    );
-                obj.fval_min(i) = fval;
-                obj.opt_min(i, :) = opt;
+                
+                % Excite or optimise
+                if obj.should_excite(i-1)
+                    points = obj.get_excited_points(i-1, obj.dir_vec);
+                    for j = 1:size(points, 1)
+                        [ineq, eq] = obj.model_con(points(j, :));
+                        if obj.system_violated(ineq, eq)
+                            continue
+                        elseif sum(points(j, :) > obj.ub) || sum(points(j, :) < obj.lb)
+                            continue
+                        end
+                        obj.fval_min(i) = func_obj(points(j, :));
+                        obj.opt_min(i, :) = points(j, :);
+                        obj.excited(i) = true;
+                        break
+                    end
+                end
+                if ~logical(obj.fval_min(i))
+                    % Optimise using fmincon
+                    [opt, fval] = fmincon( ...
+                        func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
+                        obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
+                        obj.lb, obj.ub, nonlin_con, obj.options, par ...
+                        );
+                    obj.fval_min(i) = fval;
+                    obj.opt_min(i, :) = opt;
+                    obj.excited(i) = false;
+                end
                 
                 % Move to new point and get true values
                 [true_curr, ineq, eq] = obj.system.get_output(obj.opt_min(i, :));
@@ -295,7 +394,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 end
                     
                 % Update values
-                pointer.update(obj.centre(i, :), obj.delta(i, :));
+                % pointer.update(obj.centre(i, :), obj.delta(i, :));
             end
         end
         
