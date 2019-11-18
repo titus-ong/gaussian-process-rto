@@ -252,27 +252,27 @@ classdef GPCreator  < matlab.mixin.Copyable
             
             vec_dim = length(direction_vec);
             excited = zeros(vec_dim, size(obj.centre, 2));
-            for element_no = 1:vec_dim
+            for element_no = 1:vec_dim*2  % Include negative direction vectors
                 % Get orthogonal vector of e.g. [1, 1, x]
+                curr_element = fix((element_no+1)/2);  % changes every 2 iterations
                 vec_magnitude = 0;
                 for i = 1:vec_dim
-                    if i == element_no
+                    if i == curr_element
                         continue
                     end
                     vec_magnitude = vec_magnitude + direction_vec(i);
                 end
-                last_element = -vec_magnitude / direction_vec(element_no);
+                last_element = -vec_magnitude / direction_vec(curr_element);
                 vec_ortho = ones(1, vec_dim);
-                vec_ortho(element_no) = last_element;
+                vec_ortho(curr_element) = last_element;
 
                 % Find magnitude of direction vector that will produce the
                 % furthest excited point
                 squared_x = 1 / sum(vec_ortho .^ 2 ./ obj.delta(idx, :) .^ 2);
-                x = sqrt(squared_x);
+                x = sqrt(squared_x) * (-1)^element_no;  % Changes between positive and negative
 
                 excited(element_no, :) = obj.centre(idx, :) + x * vec_ortho;
             end
-            % Include negatives!
         end
         
         function optimise(obj, iter)
