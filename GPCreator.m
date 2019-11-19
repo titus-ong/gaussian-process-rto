@@ -446,9 +446,14 @@ classdef GPCreator  < matlab.mixin.Copyable
                 hold on;
             end
             centres = plot(points(:, 1), points(:, 2), '-b*');
-            training = scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+g');
-            optimas = plot(obj.opt_min(:, 1), obj.opt_min(:, 2), '-ro');
-            legend([centres training optimas], {'Centres', 'Training inputs', 'Optimised points'});
+            training = scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+m');
+            for i = 1:length(obj.excited)
+                if ~obj.excited(i)
+                    continue
+                end
+                optimas = plot(obj.opt_min(i-1:i+1, 1), obj.opt_min(i-1:i+1, 2), '-ro');
+            end
+            legend([centres training optimas], {'Centres', 'Training inputs', 'Excited points'});
         end
     end
 end
