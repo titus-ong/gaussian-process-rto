@@ -363,11 +363,22 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % Move to new point and get true values
                 [true_curr, ineq, eq] = obj.system.get_output(obj.opt_min(i, :));
                 
-                % Train new GP
+                % Update training data
                 obj.training_input = [obj.training_input; obj.opt_min(i, :)];
                 obj.training_output.objective = [obj.training_output.objective; true_curr];
                 obj.training_output.con_ineq = [obj.training_output.con_ineq; ineq];
                 obj.training_output.con_eq = [obj.training_output.con_eq; eq];
+                
+                % Replace last training data if step size is too small
+                min_delta = obj.delta(1, :) * obj.min_TR;
+                if sum((obj.opt_min(i, :) - obj.centre(i-1, :)) .^ 2 ./ min_delta .^ 2) - 1 < 0
+                    obj.training_input(end-1, :) = [];
+                    obj.training_output.objective(end-1, :) = [];
+                    obj.training_output.con_ineq(end-1, :) = [];
+                    obj.training_output.con_eq(end-1, :) = [];
+                end
+                    
+                % Train new GP
                 obj.update_model();
                 
                 % Account for outdated data
@@ -391,6 +402,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
                 elseif new_is_worse && obj.excited(i)
+                    % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :);                    
                 elseif obj.rho(i) < obj.eta_low
@@ -409,7 +421,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 end
                 
                 % Check minimum and maximum trust region size
-                ratio = obj.delta(i, 1) / obj.delta(rows, 1);
+                ratio = obj.delta(i, 1) / obj.delta(1, 1);
                 if ratio > obj.max_TR || ratio < obj.min_TR
                     obj.delta(i, :) = obj.delta(i - 1, :);
                 end
@@ -423,19 +435,18 @@ classdef GPCreator  < matlab.mixin.Copyable
             % Plot centre moving against objective function
             % Plot delta around centres
             if size(obj.centre, 2)==2
-                obj.plot2d_indiv();
+                idx = size(obj.centre, 1);
+                obj.plot2d(idx);
             end
         end
         
-        function plot2d_indiv(obj)
+        function plot2d(obj, idx)
             obj.system.op_region_script();
             hold on;
             
-            idx = size(obj.centre, 1);
             points = zeros(idx, 2);
-            deltas = zeros(idx, 2);
             syms x y a b h k
-            for i = 1:size(obj.centre, 1)
+            for i = 1:idx
                 points(i, :) = obj.centre(i, :);
                 a = obj.delta(i, 1);
                 b = obj.delta(i, 2);
@@ -447,15 +458,20 @@ classdef GPCreator  < matlab.mixin.Copyable
             end
             centres = plot(points(:, 1), points(:, 2), '-b*');
             training = scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+m');
-            for i = 1:length(obj.excited)
-                if ~obj.excited(i)
-                    continue
+            legend([centres training], {'Centres', 'Training inputs'});
+            
+            % Plot excited points
+            if sum(obj.excited)
+                for i = 1:idx-1
+                    if ~obj.excited(i)
+                        continue
+                    end
+                    xval = [points(i-1, 1), obj.opt_min(i, 1), points(i+1, 1)];
+                    yval = [points(i-1, 2), obj.opt_min(i, 2), points(i+1, 2)];
+                    optimas = plot(xval, yval, '-ro');
                 end
-                xval = [points(i-1, 1), obj.opt_min(i, 1), points(i+1, 1)];
-                yval = [points(i-1, 2), obj.opt_min(i, 2), points(i+1, 2)];
-                optimas = plot(xval, yval, '-ro');
+                legend([centres training optimas], {'Centres', 'Training inputs', 'Excited points'});
             end
-            legend([centres training optimas], {'Centres', 'Training inputs', 'Excited points'});
         end
     end
 end
