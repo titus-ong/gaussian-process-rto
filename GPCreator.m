@@ -463,7 +463,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             legend([centres training], {'Centres', 'Training inputs'});
             
             % Plot excited points
-            if sum(obj.excited)
+            if sum(obj.excited(1:idx-1))
                 for i = 1:idx-1
                     if ~obj.excited(i)
                         continue
