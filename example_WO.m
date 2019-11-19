@@ -4,7 +4,7 @@ WO = WilliamsOtto();
 % WO.decay = true;  % Set to see effect of decay on optimisation
 
 %% Initialising Points for Training
-pointer = Pointer(WO.feasible_point_mat, WO.delta_mat);
+pointer = Pointer(WO.feasible_point_mat, WO.delta_mat, WO.lb, WO.ub);
 sample_points = pointer.random_sampling();
 % Sample points that get stuck:
 % Fb = [6.9000, 6.6992, 6.9780, 6.9399, 6.7452, 6.7390]';
