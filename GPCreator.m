@@ -411,9 +411,11 @@ classdef GPCreator  < matlab.mixin.Copyable
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :);
+                    true_last = true_curr;
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
+                    true_last = true_curr;
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
