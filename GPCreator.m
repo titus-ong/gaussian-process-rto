@@ -370,7 +370,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 obj.training_output.con_eq = [obj.training_output.con_eq; eq];
                 
                 % Replace last training data if step size is too small
-                min_delta = obj.delta(1, :) * obj.min_TR;
+                min_delta = obj.delta(1, :) * obj.max_TR * 0.01;
                 if sum((obj.opt_min(i, :) - obj.centre(i-1, :)) .^ 2 ./ min_delta .^ 2) - 1 < 0
                     obj.training_input(end-1, :) = [];
                     obj.training_output.objective(end-1, :) = [];
