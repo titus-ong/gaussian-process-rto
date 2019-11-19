@@ -390,9 +390,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
-                elseif new_is_worse
+                elseif new_is_worse && obj.excited(i)
                     obj.centre(i, :) = obj.centre(i - 1, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;                    
+                    obj.delta(i, :) = obj.delta(i - 1, :);                    
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
@@ -451,7 +451,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                 if ~obj.excited(i)
                     continue
                 end
-                optimas = plot(obj.opt_min(i-1:i+1, 1), obj.opt_min(i-1:i+1, 2), '-ro');
+                xval = [points(i-1, 1), obj.opt_min(i, 1), points(i+1, 1)];
+                yval = [points(i-1, 2), obj.opt_min(i, 2), points(i+1, 2)];
+                optimas = plot(xval, yval, '-ro');
             end
             legend([centres training optimas], {'Centres', 'Training inputs', 'Excited points'});
         end
