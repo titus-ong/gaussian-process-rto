@@ -2,7 +2,7 @@ excel = "\case study 80(10%) run2.xlsx";
 rows = 15;  % No. of intervals of reboiler_duty
 cols = 17;  % No. of intervals of solvent flowrate
 
-% data_grid = readmatrix(pwd + excel);
+data_grid = readmatrix(pwd + excel);
 x = linspace(60000, 200000, 15);
 y = linspace(200, 1000, 17);
 
