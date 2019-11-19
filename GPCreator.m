@@ -445,8 +445,10 @@ classdef GPCreator  < matlab.mixin.Copyable
                 fimplicit(ellipse, [obj.lb(1) obj.ub(1) obj.lb(2) obj.ub(2)], '--b');
                 hold on;
             end
-            plot(points(:, 1), points(:, 2), '-b*');
-            scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+r');
+            centres = plot(points(:, 1), points(:, 2), '-b*');
+            training = scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+r');
+            optimas = plot(obj.opt_min(:, 1), obj.opt_min(:, 2), '-go');
+            legend([centres training optimas], {'Centres', 'Training inputs', 'Optimised points'});
         end
     end
 end
