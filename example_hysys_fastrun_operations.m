@@ -23,7 +23,7 @@ GP.excite = false;
 toc
 
 %% Optimisation
-iter = 5;
+iter = 10;
 GP.optimise(iter);
 toc
 GP.plot();
