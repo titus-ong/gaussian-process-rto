@@ -247,8 +247,8 @@ classdef GPCreator  < matlab.mixin.Copyable
         function excited = stationary(obj, idx)
             % Find a random point within the trust region from the centre
             pointer = Pointer(obj.centre(idx, :), obj.delta(idx, :), obj.lb, obj.ub);
-            point_list = pointer.random_sampling(1);
-            excited = point_list(2, :);  % point_list's first point is the centre
+            point_list = pointer.random_sampling();
+            excited = point_list(2:end, :);  % point_list's first point is the centre
         end
         
         function excited = straight_line(obj, idx, direction_vec)
@@ -292,7 +292,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.excited = [obj.excited; zeros(iter, 1)];
             
             % Initialise
-            % pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :));
+            pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :), obj.lb, obj.ub);
             true_last = obj.system.get_output(obj.centre(rows, :));
             
             for i = rows+1:rows+iter
@@ -300,25 +300,6 @@ classdef GPCreator  < matlab.mixin.Copyable
                 par = obj.system.create_par(obj, i-1);
                 func_obj = @(x, ~) obj.obj_fn(x);
                 nonlin_con = @(x, par) obj.system.nonlin_con(x, par);
-                
-%                 % Optimise from various starting points
-%                 starting_pts = pointer.random_sampling(1);
-%                 dim = size(starting_pts);
-%                 opt_points = zeros(dim(1), dim(2));
-%                 fvals = zeros(dim(1), 1);
-%                 for each = 1:dim(1)
-%                     [opt, fval] = fmincon( ...
-%                         func_obj, starting_pts(each, :), obj.linear_con_A, ...
-%                         obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
-%                         obj.lb, obj.ub, nonlin_con, obj.options, par ...
-%                         );
-%                     opt_points(each, :) = opt;
-%                     fvals(each) = fval;
-%                 end
-%                 
-%                 % Get lowest (local) optima out of the starting points
-%                 [obj.fval_min(i), idx] = min(fvals);
-%                 obj.opt_min(i, :) = opt_points(idx, :);
                 
                 % Excite or optimise
                 if obj.should_excite(i-1) && ~obj.excited(i-1)  % Avoid excitation if previous iter was excited
@@ -349,14 +330,33 @@ classdef GPCreator  < matlab.mixin.Copyable
                     end
                 end
                 if ~logical(obj.fval_min(i))
-                    % Optimise using fmincon
-                    [opt, fval] = fmincon( ...
-                        func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
-                        obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
-                        obj.lb, obj.ub, nonlin_con, obj.options, par ...
-                        );
-                    obj.fval_min(i) = fval;
-                    obj.opt_min(i, :) = opt;
+                    % Optimise from various starting points
+                    starting_pts = pointer.random_sampling(3);
+                    dim = size(starting_pts);
+                    opt_points = zeros(dim(1), dim(2));
+                    fvals = zeros(dim(1), 1);
+                    for each = 1:dim(1)
+                        [opt, fval] = fmincon( ...
+                            func_obj, starting_pts(each, :), obj.linear_con_A, ...
+                            obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
+                            obj.lb, obj.ub, nonlin_con, obj.options, par ...
+                            );
+                        opt_points(each, :) = opt;
+                        fvals(each) = fval;
+                    end
+
+                    % Get lowest (local) optima out of the starting points
+                    [obj.fval_min(i), idx] = min(fvals);
+                    obj.opt_min(i, :) = opt_points(idx, :);
+                    
+%                     % Optimise using fmincon
+%                     [opt, fval] = fmincon( ...
+%                         func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
+%                         obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
+%                         obj.lb, obj.ub, nonlin_con, obj.options, par ...
+%                         );
+%                     obj.fval_min(i) = fval;
+%                     obj.opt_min(i, :) = opt;
                     obj.excited(i) = false;
                 end
                 
@@ -370,7 +370,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 obj.training_output.con_eq = [obj.training_output.con_eq; eq];
                 
                 % Replace last training data if step size is too small
-                min_delta = obj.delta(1, :) * obj.min_TR;
+                min_delta = obj.delta(1, :) * obj.max_TR * 0.01;
                 if sum((obj.opt_min(i, :) - obj.centre(i-1, :)) .^ 2 ./ min_delta .^ 2) - 1 < 0
                     obj.training_input(end-1, :) = [];
                     obj.training_output.objective(end-1, :) = [];
@@ -429,7 +429,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 end
                     
                 % Update values
-                % pointer.update(obj.centre(i, :), obj.delta(i, :));
+                pointer.update(obj.centre(i, :), obj.delta(i, :));
             end
         end
         
