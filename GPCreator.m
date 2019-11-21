@@ -217,13 +217,8 @@ classdef GPCreator  < matlab.mixin.Copyable
                 unit_prev = grad_prev ./ norm(grad_prev);
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
-                if length(unit_prev) < 3
-                    vec_len = unit_prev(1)*unit_curr(2) - unit_prev(2)*unit_curr(1);
-                else
-                    x_pdt = cross(unit_prev, unit_curr);
-                    vec_len = norm(x_pdt);
-                end
-                if abs(vec_len) < obj.excite_tol
+                vec_len = dot(unit_prev, unit_curr);
+                if abs(1 - vec_len) < obj.excite_tol
                     bool = true;
                 elseif sum(isnan(unit_prev)) && sum(isnan(unit_curr))
                     bool = true;
@@ -349,7 +344,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     [obj.fval_min(i), idx] = min(fvals);
                     obj.opt_min(i, :) = opt_points(idx, :);
                     
-%                     % Optimise using fmincon
+%                     % Optimise using centre as starting point
 %                     [opt, fval] = fmincon( ...
 %                         func_obj, obj.centre(i-1, :), obj.linear_con_A, ...
 %                         obj.linear_con_b, obj.lineq_con_A, obj.lineq_con_b, ...
@@ -401,6 +396,13 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
+                    % Simulate not getting any data from violated point
+%                     obj.training_input(end, :) = [];
+%                     obj.training_output.objective(end, :) = [];
+%                     obj.training_output.con_ineq(end, :) = [];
+%                     obj.training_output.con_eq(end, :) = [];
+%                     obj.values_adj(end) = obj.values_adj(end-1);
+%                     obj.model(end) = obj.model(end-1);
                 elseif new_is_worse && obj.excited(i)
                     % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
