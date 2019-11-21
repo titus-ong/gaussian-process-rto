@@ -24,6 +24,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         rho                     % Rho matrix
         dir_vec                 % Directional vector of current gradient
         excited                 % Logical array of whether point is an excited point
+        small_step              % Logical array of whether point taken was a small step (almost stationary)
         
         forget                  % Forgetting factor boolean
         excite                  % Excite boolean
@@ -36,7 +37,8 @@ classdef GPCreator  < matlab.mixin.Copyable
         delta_expansion         % Expansion in delta when Rho > eta_high
         forgetting_factor       % Allowance for inaccuracies in GP due to outdated data
         constraint_tol          % Tolerance when system constraint is violated
-        excite_tol              % Tolerance of points being aligned for excitation
+        align_tol               % Tolerance of points being aligned for excitation
+        region_tol              % Tolerance (fraction of max TR) of points in same region for excitation
     end
     methods
         function obj = GPCreator(system, training_input, training_output)
@@ -59,7 +61,8 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.delta_expansion = system.delta_expansion;
             obj.forgetting_factor = system.forgetting_factor;
             obj.constraint_tol = system.constraint_tol;
-            obj.excite_tol = system.excite_tol;
+            obj.align_tol = system.align_tol;
+            obj.region_tol = system.region_tol;
             
             obj.training_input = training_input;
             obj.training_starter = training_input;
@@ -70,6 +73,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
             obj.excited = zeros();
+            obj.small_step = zeros();
             
             obj.model = struct();
             obj.update_model();
@@ -218,9 +222,10 @@ classdef GPCreator  < matlab.mixin.Copyable
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
-                if abs(1 - vec_len) < obj.excite_tol
+                if abs(1 - vec_len) < obj.align_tol
                     bool = true;
-                elseif sum(isnan(unit_prev)) && sum(isnan(unit_curr))
+                elseif sum(obj.small_step(idx-2:idx))==3
+                    % Past 3 steps were small
                     bool = true;
                 else
                     bool = false;
@@ -285,6 +290,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.opt_min = [obj.opt_min; zeros(iter, cols)];
             obj.rho = [obj.rho; zeros(iter, 1)];
             obj.excited = [obj.excited; zeros(iter, 1)];
+            obj.small_step = [obj.small_step; zeros(iter, 1)];
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :), obj.lb, obj.ub);
@@ -365,8 +371,11 @@ classdef GPCreator  < matlab.mixin.Copyable
                 obj.training_output.con_eq = [obj.training_output.con_eq; eq];
                 
                 % Replace last training data if step size is too small
-                min_delta = obj.delta(1, :) * obj.max_TR * 0.01;
-                if sum((obj.opt_min(i, :) - obj.centre(i-1, :)) .^ 2 ./ min_delta .^ 2) - 1 < 0
+                min_delta = obj.delta(1, :) * obj.max_TR * obj.region_tol;
+                % Small step if: new centre is close to centre, and step
+                % does not violate system constraints
+                obj.small_step(i) = (sum((obj.opt_min(i, :) - obj.centre(i-1, :)) .^ 2 ./ min_delta .^ 2) - 1 < 0 && ~obj.system_violated(ineq, eq));
+                if obj.small_step(i)
                     obj.training_input(end-1, :) = [];
                     obj.training_output.objective(end-1, :) = [];
                     obj.training_output.con_ineq(end-1, :) = [];
@@ -390,19 +399,20 @@ classdef GPCreator  < matlab.mixin.Copyable
                     (true_curr - true_last) / (predicted_curr - predicted_last) ...
                 );
                 new_is_worse = (true_curr - true_last) > 0;
-            
+                shrink = obj.delta_reduction ^ obj.small_step(i);  % Shrink if small step
+
                 if obj.system_violated(ineq, eq)
                     % Current point violates system constraints
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
                     % Simulate not getting any data from violated point
-%                     obj.training_input(end, :) = [];
-%                     obj.training_output.objective(end, :) = [];
-%                     obj.training_output.con_ineq(end, :) = [];
-%                     obj.training_output.con_eq(end, :) = [];
-%                     obj.values_adj(end) = obj.values_adj(end-1);
-%                     obj.model(end) = obj.model(end-1);
+                    obj.training_input(end, :) = [];
+                    obj.training_output.objective(end, :) = [];
+                    obj.training_output.con_ineq(end, :) = [];
+                    obj.training_output.con_eq(end, :) = [];
+                    obj.values_adj(end) = obj.values_adj(end-1);
+                    obj.model(end) = obj.model(end-1);
                 elseif new_is_worse && obj.excited(i)
                     % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
@@ -412,11 +422,11 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :) * shrink;
                     true_last = true_curr;
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion;
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion * shrink^2;
                     true_last = true_curr;
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
