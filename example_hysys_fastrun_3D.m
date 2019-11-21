@@ -1,12 +1,12 @@
 %% User name variables
-hysys_name = "\fast run - operations.hsc";
+hysys_name = "\fast run - 3D.hsc";
 spreadsheet_input = "Inputs";
 spreadsheet_output = "Outputs";
 
 %% Connect to HYSYS
 tic
 hysys_path = pwd + hysys_name;
-hysys = HYSYSFile_fastrun_operations(hysys_path, spreadsheet_input, spreadsheet_output);
+hysys = HYSYSFile_fastrun_3D(hysys_path, spreadsheet_input, spreadsheet_output);
 toc
 
 %% Initialising Points for Training

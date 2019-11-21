@@ -1,4 +1,4 @@
-classdef HYSYSFile_fastrun_operations  < matlab.mixin.Copyable
+classdef HYSYSFile_fastrun_3D  < matlab.mixin.Copyable
     properties (SetAccess=private)
         simulation                                 % Simulation object
         flowsheet                                  % Simulation flowsheet
@@ -40,16 +40,21 @@ classdef HYSYSFile_fastrun_operations  < matlab.mixin.Copyable
             );
         feasible_point = struct( ...
             "reboiler_duty", 120000, ...            
-            "solvent_flowrate", 900 ...
+            "solvent_flowrate", 500, ...
+            "inlet_gas_flowrate", 80 ...            
             );
         delta = struct( ...                        % 10% of operating range
             "reboiler_duty", 5500, ...
-            "solvent_flowrate", 50 ...
+            "solvent_flowrate", 50, ...
+            "inlet_gas_flowrate", 15 ...            
             );
+        
         constraints_ineq = { ...
             'sweetgas_CO2_comp', ...
             };
-        
+
+%         constraints_ineq = [];
+
         constraints_eq = [];
         
         output_fields = { ...
@@ -62,8 +67,8 @@ classdef HYSYSFile_fastrun_operations  < matlab.mixin.Copyable
         linear_con_b = [];                         % Linear inequality constraints LHS
         lineq_con_A = [];                          % Linear equality constraints LHS
         lineq_con_b = [];                          % Linear equality constraints LHS
-        lb = [60000, 150];                          % Lower bounds
-        ub = [200000, 1000];                        % Upper bounds
+        lb = [60000, 150, 40];                          % Lower bounds
+        ub = [200000, 1000, 300];                        % Upper bounds
         options = optimset('disp','off');          % Options for GP - iter or off
     
         min_TR = 0.4                               % Minimum trust region as percentage of original delta
@@ -82,7 +87,7 @@ classdef HYSYSFile_fastrun_operations  < matlab.mixin.Copyable
         op_region_script                           % Function for plotting operating region
     end
     methods
-        function obj = HYSYSFile_fastrun_operations(filepath, spreadsheet_input, spreadsheet_output) % Constructor method
+        function obj = HYSYSFile_fastrun_3D(filepath, spreadsheet_input, spreadsheet_output) % Constructor method
             hysys = actxserver('HYSYS.APPLICATION');
             obj.simulation = hysys.SimulationCases.Open(filepath);
             obj.flowsheet = obj.simulation.Flowsheet;
