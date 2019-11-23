@@ -31,7 +31,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         ub = [7, 100];                             % Upper bounds
         options = optimset('disp','off');          % Options for GP
 
-        min_TR = 0.1                              % Minimum trust region as percentage of original delta
+        min_TR = 0.01                              % Minimum trust region as percentage of original delta
         max_TR = 10                                % Maximum trust region as percentage of original delta
         eta_low = 0.1                              % Rho constant
         eta_high = 0.9                             % Rho constant
@@ -39,7 +39,8 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
-        excite_tol = 1e-2                          % Tolerance of points being aligned for excitation
+        align_tol = 1e-4                           % Tolerance of points being aligned for excitation
+        region_tol = 1e-4                          % Tolerance (fraction of max TR) of points in same region for excitation
     end
     properties
         init_var = struct( ...
