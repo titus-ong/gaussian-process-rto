@@ -6,7 +6,7 @@ spreadsheet_output = "Outputs";
 %% Connect to HYSYS
 tic
 hysys_path = pwd + hysys_name;
-hysys = HYSYSFile_case_studies(hysys_path, spreadsheet_input, spreadsheet_output);
+hysys = HYSYSFile_case_studies_3D(hysys_path, spreadsheet_input, spreadsheet_output);
 toc
 
 %% Initialising Points for Training
