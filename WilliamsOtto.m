@@ -40,7 +40,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
         align_tol = 1e-3                           % Tolerance of points being aligned for excitation
-        region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation
+        region_tol = 5e-4                          % Tolerance (fraction of max TR) of points in same region for excitation
     end
     properties
         init_var = struct( ...
@@ -58,6 +58,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         time                                       % Pseudo time for decay
         op_region_script                           % Function for plotting operating region
         forget                                     % Switch for forgetting factor
+        x_a_val                                    % x_a constraint value (for moving constraint)
     end
     methods
         function obj = WilliamsOtto()
@@ -67,6 +68,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
             obj.time = 0;
             obj.forget = false;
             obj.op_region_script = @op_region_plot_WO;
+            obj.x_a_val = 0.12;
         end
         
         function objective = objective_value(obj, inputs, outputs)
@@ -85,7 +87,7 @@ classdef WilliamsOtto  < matlab.mixin.Copyable
         function constraint = x_a_con(obj, ~, outputs)
             % x_a < 0.12
             x_a = outputs(fieldnames(obj.init_var)=="x_a");
-            constraint = x_a - 0.12;
+            constraint = x_a - obj.x_a_val;
         end
         
         function constraint = x_g_con(obj, ~, outputs)
