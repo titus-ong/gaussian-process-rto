@@ -93,9 +93,12 @@ classdef GPCreator  < matlab.mixin.Copyable
             if isempty(fieldnames(obj.model))  % model is empty
                 idx = 1;  % So model fills up from first row
             end
-            obj.values_adj(idx).input.mean = mean(obj.training_input);
-            obj.values_adj(idx).input.std = std(obj.training_input);
-            obj.values_adj(idx).input.norm = normalize(obj.training_input);
+%             obj.values_adj(idx).input.mean = mean(obj.training_input);
+%             obj.values_adj(idx).input.std = std(obj.training_input);
+%             obj.values_adj(idx).input.norm = normalize(obj.training_input);
+            obj.values_adj(idx).input.mean = (obj.lb + obj.ub)/2;
+            obj.values_adj(idx).input.std = obj.ub - obj.values_adj(idx).input.mean;
+            obj.values_adj(idx).input.norm = (obj.training_input - obj.values_adj(idx).input.mean) ./ obj.values_adj(idx).input.std;
             
             % Objective model
             obj.values_adj(idx).objective.mean = mean(obj.training_output.objective);
