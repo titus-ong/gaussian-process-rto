@@ -73,7 +73,7 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
         align_tol = 1e-4                           % Tolerance of points being aligned for excitation
-        region_tol = 1e-4                          % Tolerance (fraction of max TR) of points in same region for excitation
+        region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation
     end
     properties
         feasible_point_mat                         % Matrix form
