@@ -19,6 +19,9 @@ classdef GPCreator  < matlab.mixin.Copyable
         
         centre                  % Centre matrix
         delta                   % Delta matrix
+        fval_true               % System objective function value matrix
+        ineq_true               % System inequality constraint value matrix
+        eq_true               % System equality constraint value matrix
         fval_min                % GP objective function value matrix
         opt_min                 % Optimal point matrix
         rho                     % Rho matrix
@@ -69,6 +72,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.training_output = training_output;
             obj.delta = system.delta_mat;
             obj.centre = obj.training_input(1, :);
+            obj.fval_true(1) = 0;
+            obj.ineq_true = zeros(0, size(obj.training_output.con_ineq, 2));
+            obj.eq_true = zeros(0, size(obj.training_output.con_eq, 2));
             obj.fval_min(1) = 0;
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
@@ -289,6 +295,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             rows = size(obj.centre, 1);
             obj.centre = [obj.centre; zeros(iter, cols)];
             obj.delta = [obj.delta; zeros(iter, cols)];
+            obj.fval_true = [obj.fval_true; zeros(iter, 1)];
+            obj.ineq_true = [obj.ineq_true; zeros(iter, size(obj.ineq_true, 2))];
+            obj.eq_true = [obj.eq_true; zeros(iter, size(obj.eq_true, 2))];
             obj.fval_min = [obj.fval_min; zeros(iter, 1)];
             obj.opt_min = [obj.opt_min; zeros(iter, cols)];
             obj.rho = [obj.rho; zeros(iter, 1)];
@@ -297,7 +306,10 @@ classdef GPCreator  < matlab.mixin.Copyable
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :), obj.lb, obj.ub);
-            true_last = obj.system.get_output(obj.centre(rows, :));
+            [true_last, ineq_last, eq_last] = obj.system.get_output(obj.centre(rows, :));
+            obj.fval_true(rows) = true_last;
+            obj.ineq_true(rows, :) = ineq_last;
+            obj.eq_true(rows, :) = eq_last;
             
             for i = rows+1:rows+iter
                 % Update parameters for constraints with current iteration data
@@ -409,6 +421,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                     % Simulate not getting any data from violated point
                     obj.training_input(end, :) = [];
                     obj.training_output.objective(end, :) = [];
@@ -419,22 +434,37 @@ classdef GPCreator  < matlab.mixin.Copyable
                 elseif new_is_worse && obj.excited(i)
                     % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :);                    
+                    obj.delta(i, :) = obj.delta(i - 1, :);
+                    obj.fval_true(i) = obj.fval_true(i-1); 
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);                   
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * shrink;
                     true_last = true_curr;
+                    obj.fval_true(i) = true_curr;
+                    obj.ineq_true(i, :) = ineq;
+                    obj.eq_true(i, :) = eq;
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion * shrink^2;
                     true_last = true_curr;
+                    obj.fval_true(i) = true_curr;
+                    obj.ineq_true(i, :) = ineq;
+                    obj.eq_true(i, :) = eq;
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = Inf;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                 end
                 
                 % Check minimum and maximum trust region size
