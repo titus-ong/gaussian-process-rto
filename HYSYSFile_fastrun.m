@@ -64,15 +64,15 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         ub = [200000, 300];                        % Upper bounds
         options = optimset('disp','off');          % Options for GP - iter or off
     
-        min_TR = 0.4                               % Minimum trust region as percentage of original delta
+        min_TR = 0.01                              % Minimum trust region as percentage of original delta
         max_TR = 2                                 % Maximum trust region as percentage of original delta
         eta_low = 0.1                              % Rho constant
         eta_high = 0.9                             % Rho constant
         delta_reduction = 0.8                      % Reduction in delta when Rho < eta_low
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
-        constraint_tol = 1e-3                      % Tolerance when system constraint is violated
-        align_tol = 1e-4                           % Tolerance of points being aligned for excitation
+        constraint_tol = 1e-4                      % Tolerance when system constraint is violated
+        align_tol = 5e-5                           % Tolerance of points being aligned for excitation
         region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation
     end
     properties
