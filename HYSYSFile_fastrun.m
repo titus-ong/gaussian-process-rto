@@ -53,8 +53,9 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         output_fields = { ...
             'objective_true', ...
             'reboiler_duty', ...
-            'e_cooling_water' ...
-            'clean_gas_co2' ...
+            'e_cooling_water', ...
+            'clean_gas_co2', ...
+            'inlet_gas_flowrate' ...
             };
         linear_con_A = [];                         % Linear inequality constraints LHS (Ax = b)
         linear_con_b = [];                         % Linear inequality constraints LHS
@@ -99,12 +100,14 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         function objective = objective_value(obj, outputs)
             % Calculate objective function from outputs
             objective = outputs(obj.output_fields=="objective_true");
+            objective = objective + randn(1,1)*0.0041286099;
         end
         
         function constraint = sweetgas_CO2_comp(obj, outputs)
             % sweetgas_CO2_comp < 0.03
             sweetgas_CO2_comp = outputs(obj.output_fields=="clean_gas_co2");
             constraint = sweetgas_CO2_comp - 0.03;
+            constraint = constraint + randn(1,1)*0.0031/(outputs(obj.output_fields=="inlet_gas_flowrate")*3600);
         end
         
         function [c,ceq] = nonlin_con(obj, x, par)
