@@ -19,6 +19,9 @@ classdef GPCreator  < matlab.mixin.Copyable
         
         centre                  % Centre matrix
         delta                   % Delta matrix
+        fval_true               % System objective function value matrix
+        ineq_true               % System inequality constraint value matrix
+        eq_true               % System equality constraint value matrix
         fval_min                % GP objective function value matrix
         opt_min                 % Optimal point matrix
         rho                     % Rho matrix
@@ -69,6 +72,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             obj.training_output = training_output;
             obj.delta = system.delta_mat;
             obj.centre = obj.training_input(1, :);
+            obj.fval_true(1) = 0;
+            obj.ineq_true = zeros(0, size(obj.training_output.con_ineq, 2));
+            obj.eq_true = zeros(0, size(obj.training_output.con_eq, 2));
             obj.fval_min(1) = 0;
             obj.opt_min(1, :) = obj.training_input(1, :);
             obj.rho = zeros();
@@ -225,10 +231,11 @@ classdef GPCreator  < matlab.mixin.Copyable
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
-                if abs(1 - vec_len) < obj.align_tol
-                    bool = true;
-                elseif sum(obj.small_step(idx-2:idx))==3
+                1-vec_len
+                if sum(obj.small_step(idx-2:idx))==3
                     % Past 3 steps were small
+                    bool = true;
+                elseif abs(1 - vec_len) < obj.align_tol
                     bool = true;
                 else
                     bool = false;
@@ -240,7 +247,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         function excited = get_excited_points(obj, idx, direction_vec)
             % Get excited points given previous direction vector and
             % current centre
-            if sum(isnan(direction_vec))
+            if sum(obj.small_step(idx-2:idx))==3
                 excited = obj.stationary(idx);
             else
                 excited = obj.straight_line(idx, direction_vec);
@@ -249,38 +256,64 @@ classdef GPCreator  < matlab.mixin.Copyable
         
         function excited = stationary(obj, idx)
             % Find a random point within the trust region from the centre
+            % Return NaN if no point is found
             pointer = Pointer(obj.centre(idx, :), obj.delta(idx, :), obj.lb, obj.ub);
-            point_list = pointer.random_sampling();
-            excited = point_list(2:end, :);  % point_list's first point is the centre
+            for i = 1:5
+                point_list = pointer.random_sampling(1);
+                excited = point_list(2, :);  % point_list's first point is the centre
+                [ineq, eq] = obj.model_con(excited);
+                if obj.system_violated(ineq, eq)
+                    % Violate system constraints
+                    continue
+                elseif sum(excited > obj.ub) || sum(excited < obj.lb)
+                    % Violate lower/upper bounds
+                    continue
+                end
+                return
+            end
+            excited = nan;
         end
         
         function excited = straight_line(obj, idx, direction_vec)
-            % Find n points that are orthogonal to direction vector and are
-            % within delta, where n is the number of dimensions
+            % Find a point that is orthogonal to direction vector and is
+            % within delta; Return NaN if no point is found
             
             vec_dim = length(direction_vec);
-            excited = zeros(vec_dim, size(obj.centre, 2));
-            for element_no = 1:vec_dim*2  % Include negative direction vectors
-                % Get orthogonal vector of e.g. [1, 1, x]
-                curr_element = fix((element_no+1)/2);  % changes every 2 iterations
+            for i = 1:5
+                % Get random orthogonal vector of direction vector
+                element_no = randi(vec_dim);
                 vec_magnitude = 0;
-                for i = 1:vec_dim
-                    if i == curr_element
+                vec_ortho = zeros(1, vec_dim);
+                for j = 1:vec_dim
+                    if j == element_no
                         continue
                     end
-                    vec_magnitude = vec_magnitude + direction_vec(i);
+                    vec_ortho(j) = rand();
+                    vec_magnitude = vec_magnitude + vec_ortho(j) * direction_vec(j);
                 end
-                last_element = -vec_magnitude / direction_vec(curr_element);
-                vec_ortho = ones(1, vec_dim);
-                vec_ortho(curr_element) = last_element;
+                last_element = -vec_magnitude / direction_vec(element_no);
+                vec_ortho(element_no) = last_element;
 
                 % Find magnitude of direction vector that will produce the
                 % furthest excited point
                 squared_x = 1 / sum(vec_ortho .^ 2 ./ obj.delta(idx, :) .^ 2);
-                x = sqrt(squared_x) * (-1)^element_no;  % Changes between positive and negative
-
-                excited(element_no, :) = obj.centre(idx, :) + x * vec_ortho;
+                x = sqrt(squared_x);
+                line = linspace(-x, x, 5);
+                
+                for j = 1:5
+                    excited = obj.centre(idx, :) + line(j) * vec_ortho;
+                    [ineq, eq] = obj.model_con(excited);
+                    if obj.system_violated(ineq, eq)
+                        % Violate system constraints
+                        continue
+                    elseif sum(excited > obj.ub) || sum(excited < obj.lb)
+                        % Violate lower/upper bounds
+                        continue
+                    end
+                    return
+                end
             end
+            excited = nan;
         end
         
         function optimise(obj, iter)
@@ -289,6 +322,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             rows = size(obj.centre, 1);
             obj.centre = [obj.centre; zeros(iter, cols)];
             obj.delta = [obj.delta; zeros(iter, cols)];
+            obj.fval_true = [obj.fval_true; zeros(iter, 1)];
+            obj.ineq_true = [obj.ineq_true; zeros(iter, size(obj.ineq_true, 2))];
+            obj.eq_true = [obj.eq_true; zeros(iter, size(obj.eq_true, 2))];
             obj.fval_min = [obj.fval_min; zeros(iter, 1)];
             obj.opt_min = [obj.opt_min; zeros(iter, cols)];
             obj.rho = [obj.rho; zeros(iter, 1)];
@@ -297,7 +333,10 @@ classdef GPCreator  < matlab.mixin.Copyable
             
             % Initialise
             pointer = Pointer(obj.centre(rows, :), obj.delta(rows, :), obj.lb, obj.ub);
-            true_last = obj.system.get_output(obj.centre(rows, :));
+            [true_last, ineq_last, eq_last] = obj.system.get_output(obj.centre(rows, :));
+            obj.fval_true(rows) = true_last;
+            obj.ineq_true(rows, :) = ineq_last;
+            obj.eq_true(rows, :) = eq_last;
             
             for i = rows+1:rows+iter
                 % Update parameters for constraints with current iteration data
@@ -307,29 +346,10 @@ classdef GPCreator  < matlab.mixin.Copyable
                 
                 % Excite or optimise
                 if obj.should_excite(i-1) && ~obj.excited(i-1)  % Avoid excitation if previous iter was excited
-                    points = obj.get_excited_points(i-1, obj.dir_vec);
-                    feasible = zeros(0, 2);
-                    for j = 1:size(points, 1)
-                        [ineq, eq] = obj.model_con(points(j, :));
-                        if obj.system_violated(ineq, eq)
-                            % Violate system constraints
-                            continue
-                        elseif sum(points(j, :) > obj.ub) || sum(points(j, :) < obj.lb)
-                            % Violate lower/upper bounds
-                            continue
-                        else
-                            % Feasible point
-                            rw = size(feasible, 1) + 1;
-                            feasible(rw, 1) = j;
-                            feasible(rw, 2) = func_obj(points(j, :));
-                        end
-                    end
-                    if ~isempty(feasible)
-                        % Find optimal feasible point
-                        [rw, ~] = find(feasible(:, 2)==max(feasible(:, 2)));
-                        rw = rw(1);  % If there are duplicate optimas
-                        obj.fval_min(i) = feasible(rw, 2);
-                        obj.opt_min(i, :) = points(feasible(rw, 1), :);
+                    excited_point = obj.get_excited_points(i-1, obj.dir_vec);
+                    if ~isnan(excited_point)
+                        obj.fval_min(i) = func_obj(excited_point);
+                        obj.opt_min(i, :) = excited_point;
                         obj.excited(i) = true;
                     end
                 end
@@ -409,6 +429,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = NaN;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                     % Simulate not getting any data from violated point
                     obj.training_input(end, :) = [];
                     obj.training_output.objective(end, :) = [];
@@ -419,22 +442,37 @@ classdef GPCreator  < matlab.mixin.Copyable
                 elseif new_is_worse && obj.excited(i)
                     % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :);                    
+                    obj.delta(i, :) = obj.delta(i - 1, :);
+                    obj.fval_true(i) = obj.fval_true(i-1); 
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);                   
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * shrink;
                     true_last = true_curr;
+                    obj.fval_true(i) = true_curr;
+                    obj.ineq_true(i, :) = ineq;
+                    obj.eq_true(i, :) = eq;
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion * shrink^2;
                     true_last = true_curr;
+                    obj.fval_true(i) = true_curr;
+                    obj.ineq_true(i, :) = ineq;
+                    obj.eq_true(i, :) = eq;
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.rho(i) = Inf;
+                    obj.fval_true(i) = obj.fval_true(i-1);
+                    obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);
                 end
                 
                 % Check minimum and maximum trust region size
