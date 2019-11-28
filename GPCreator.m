@@ -298,9 +298,9 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % furthest excited point
                 squared_x = 1 / sum(vec_ortho .^ 2 ./ obj.delta(idx, :) .^ 2);
                 x = sqrt(squared_x);
-                line = linspace(-x, x, 5);
+                line = linspace(-x, x, 6);
                 
-                for j = 1:5
+                for j = 1:6
                     excited = obj.centre(idx, :) + line(j) * vec_ortho;
                     [ineq, eq] = obj.model_con(excited);
                     if obj.system_violated(ineq, eq)
