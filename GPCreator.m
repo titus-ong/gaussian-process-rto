@@ -298,9 +298,18 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % furthest excited point
                 squared_x = 1 / sum(vec_ortho .^ 2 ./ obj.delta(idx, :) .^ 2);
                 x = sqrt(squared_x);
-                line = linspace(-x, x, 6);
                 
-                for j = 1:6
+                % Arrange orthogonal vectors to start with ends and move
+                % towards the centre
+                spaced = linspace(-x, x, 50);
+                first_half = spaced(1:25);
+                second_half = flip(spaced(26:50));
+                line = ones(1, 50);
+                for j = 0:24
+                    line(j*2+1:j*2+2) = [first_half(j+1) second_half(j+1)];
+                end
+                
+                for j = 1:50
                     excited = obj.centre(idx, :) + line(j) * vec_ortho;
                     [ineq, eq] = obj.model_con(excited);
                     if obj.system_violated(ineq, eq)
@@ -439,19 +448,22 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.training_output.con_eq(end, :) = [];
                     obj.values_adj(end) = obj.values_adj(end-1);
                     obj.model(end) = obj.model(end-1);
+                    obj.excited(i) = false;
                 elseif new_is_worse && obj.excited(i)
                     % Excited point has worse objective value
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :);
                     obj.fval_true(i) = obj.fval_true(i-1); 
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
-                    obj.eq_true(i, :) = obj.eq_true(i-1, :);                   
+                    obj.eq_true(i, :) = obj.eq_true(i-1, :);  
+                    obj.excited(i) = false;                 
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);
+                    obj.excited(i) = false;
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * shrink;
@@ -473,6 +485,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);
+                    obj.excited(i) = false;
                 end
                 
                 % Check minimum and maximum trust region size
