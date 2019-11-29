@@ -39,8 +39,8 @@ classdef HYSYSFile_case_studies  < matlab.mixin.Copyable
             'objective_true', 'A27' ...
             );
         feasible_point = struct( ...
-            'solvent_flowrate', 300, ...
-            "reboiler_duty", 180000 ...
+            'inlet_gas_flowrate', 40, ...
+            "reboiler_duty", 80000 ...
             );
 
         output_fields = { ...
@@ -72,8 +72,8 @@ classdef HYSYSFile_case_studies  < matlab.mixin.Copyable
             'j101_flowrate', ...
             'objective_true'...
             };
-        lb = [80000, 40];                          % Lower bounds
-        ub = [200000, 300];                        % Upper bounds
+        lb = [40, 80000];                          % Lower bounds
+        ub = [300, 200000];                        % Upper bounds
     end
     
     properties
@@ -115,7 +115,7 @@ classdef HYSYSFile_case_studies  < matlab.mixin.Copyable
             obj.solver.CanSolve = 1;
         end
         
-        function [outputs] = get_output(obj, inputs, input1_steps, state)
+        function [outputs] = get_output(obj, inputs)
             % Get output values from HYSYS spreadsheet using given inputs
             
             % Pre-allocation
@@ -130,9 +130,7 @@ classdef HYSYSFile_case_studies  < matlab.mixin.Copyable
                     obj.set_param(field{idx}, inputs(point, idx));
                 end
                 
-                if rem((state-1),input1_steps) == 0 || state == 1
                 obj.energy_stream.Item('Cooling water').HeatFlowvalue = -500/3600;
-                end 
                 
                 obj.start_solver();
                 
