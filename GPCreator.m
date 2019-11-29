@@ -258,7 +258,7 @@ classdef GPCreator  < matlab.mixin.Copyable
             % Find a random point within the trust region from the centre
             % Return NaN if no point is found
             pointer = Pointer(obj.centre(idx, :), obj.delta(idx, :), obj.lb, obj.ub);
-            for i = 1:5
+            for i = 1:50
                 point_list = pointer.random_sampling(1);
                 excited = point_list(2, :);  % point_list's first point is the centre
                 [ineq, eq] = obj.model_con(excited);
