@@ -232,8 +232,8 @@ classdef GPCreator  < matlab.mixin.Copyable
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
                 1-vec_len
-                if sum(obj.small_step(idx-2:idx))==3
-                    % Past 3 steps were small
+                if sum(obj.small_step(idx-2:idx))==2
+                    % Past 2 steps were small
                     bool = true;
                 elseif abs(1 - vec_len) < obj.align_tol
                     bool = true;
@@ -247,7 +247,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         function excited = get_excited_points(obj, idx, direction_vec)
             % Get excited points given previous direction vector and
             % current centre
-            if sum(obj.small_step(idx-2:idx))==3
+            if sum(obj.small_step(idx-2:idx))==2
                 excited = obj.stationary(idx);
             else
                 excited = obj.straight_line(idx, direction_vec);
