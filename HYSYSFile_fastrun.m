@@ -47,9 +47,8 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
             "inlet_gas_flowrate", 15 ...
             );
         constraints_ineq = { ...
-            'sweetgas_CO2_comp', ...            
+            'sweetgas_CO2_comp', ...
             };
-%             'sweetgas_CO2_comp', ...
         
         constraints_eq = [];
         
@@ -75,8 +74,8 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         delta_reduction = 0.8                      % Reduction in delta when Rho < eta_low
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
-        constraint_tol = 1e-3                      % Tolerance when system constraint is violated
-        align_tol = 5e-8                           % Tolerance of points being aligned for excitation
+        constraint_tol = 4e-4                      % Tolerance when system constraint is violated
+        align_tol = 5e-7                           % Tolerance of points being aligned for excitation
         region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation
     end
     properties
@@ -103,14 +102,14 @@ classdef HYSYSFile_fastrun  < matlab.mixin.Copyable
         function objective = objective_value(obj, outputs)
             % Calculate objective function from outputs
             objective = outputs(obj.output_fields=="objective_true");
-%             objective = objective + randn(1,1)*0.0041286099;
+            objective = objective + randn(1,1)*0.0041286099;
         end
         
         function constraint = sweetgas_CO2_comp(obj, outputs)
             % sweetgas_CO2_comp < 0.03
             sweetgas_CO2_comp = outputs(obj.output_fields=="clean_gas_co2");
             constraint = sweetgas_CO2_comp - 0.03;
-%             constraint = constraint + randn(1,1)*0.0031/(outputs(obj.output_fields=="inlet_gas_flowrate")*3600);
+            constraint = constraint + randn(1,1)*0.0031/(outputs(obj.output_fields=="inlet_gas_flowrate")*3600);
         end
         
         function [c,ceq] = nonlin_con(obj, x, par)
