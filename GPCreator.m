@@ -459,7 +459,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.excited(i) = false;                 
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction^(1-obj.excited(i));
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);
@@ -473,14 +473,14 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.eq_true(i, :) = eq;
                 elseif obj.rho(i) >= obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion * shrink^2;
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_expansion^(1-obj.excited(i)) * shrink^2;
                     true_last = true_curr;
                     obj.fval_true(i) = true_curr;
                     obj.ineq_true(i, :) = ineq;
                     obj.eq_true(i, :) = eq;
                 else  % Rho calculated is NaN
                     obj.centre(i, :) = obj.centre(i - 1, :);
-                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction;
+                    obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction^(1-obj.excited(i));
                     obj.rho(i) = Inf;
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
