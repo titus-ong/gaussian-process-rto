@@ -1,4 +1,4 @@
-excel = "\fast run results.xlsx";
+excel = "\fast run results rerun (with pump flowrates).xlsx";
 rows = 21;  % No. of intervals of reboiler_duty
 cols = 21;  % No. of intervals of sour_gas
 
@@ -16,10 +16,10 @@ z1 = plot_columns(data_grid, rows, cols, 27)';
 z2 = plot_columns(data_grid, rows, cols, 7)';
 
 % 3D plot
-figure
-hold on;
-surf(x, y, z1)
-h = scatter3(x(col),y(row),z1(i),'r', 'filled');
+% figure
+% hold on;
+% surf(x, y, z1)
+% h = scatter3(x(col),y(row),z1(i),'r', 'filled');
 
 % 2D plot
 figure
