@@ -26,4 +26,10 @@ toc
 iter = 10;
 GP.optimise(iter);
 toc
-GP.plot();
+% GP.plot();
+%[rb, solvent, gas]
+
+centres=GP.centre;
+centres(:,1)=(centres(:,1)-50000)/10000;
+centres(:,2)=(centres(:,2)-150)/50;
+centres(:,3)=(centres(:,3)-30)/10;
