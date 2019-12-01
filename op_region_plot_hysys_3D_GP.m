@@ -1,15 +1,15 @@
 % Run example script first to get GP variable in workspace
-rows = 100;
-cols = 100;
-heights = 100;
-model_idx = 20;  % Which iteration of GP to display
+rows = 20;
+cols = 20;
+heights = 20;
+model_idx = 11;  % Which iteration of GP to display
 
 % x1 = linspace(hysys.lb(1), hysys.ub(1), cols);
 % x2 = linspace(hysys.lb(2), hysys.ub(2), rows);
 % x3 = linspace(hysys.lb(3), hysys.ub(3), heights);
 x1 = linspace(60000, 130000, cols);
-x2 = linspace(200, 550, rows);
-x3 = linspace(60, 100, heights);
+x2 = linspace(200, 600, rows);
+x3 = linspace(40, 120, heights);
 
 temp_GP = copy(GP);
 temp_GP.model = temp_GP.model(1:model_idx);
@@ -40,22 +40,22 @@ for i = 1:cols
         end
     end
 end
-
-% Plots
-f = figure;
-hold on;
-xslice = [100000 120000];                               % define the cross sections to view
-yslice = [500];
-zslice = [70 90];
-
-slice(x1, x2, x3, data, xslice, yslice, zslice)    % display the slices
-
-% xlim([80000 120000])
-% ylim([200 500])
-% zlim([70 100])
-
-cb = colorbar;                                  % create and label the colorbar
-cb.Label.String = 'Obj fn';
+% 
+% % Plots
+% f = figure;
+% hold on;
+% xslice = [100000 120000];                               % define the cross sections to view
+% yslice = [500];
+% zslice = [70 90];
+% 
+% slice(x1, x2, x3, data, xslice, yslice, zslice)    % display the slices
+% 
+% % xlim([80000 120000])
+% % ylim([200 500])
+% % zlim([70 100])
+% 
+% cb = colorbar;                                  % create and label the colorbar
+% cb.Label.String = 'Obj fn';
 
 % % surf(x1, x2, data)
 % contour(x1, x2, data, 30)
