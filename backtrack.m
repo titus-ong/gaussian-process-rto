@@ -1,0 +1,11 @@
+i=5;
+GP.small_step(end-i+1:end,:)=[];
+GP.excited(end-i+1:end,:)=[];
+GP.rho(end-i+1:end,:)=[];
+GP.opt_min(end-i+1:end,:)=[];
+GP.fval_min(end-i+1:end,:)=[];
+GP.eq_true(end-i+1:end,:)=[];
+GP.ineq_true(end-i+1:end,:)=[];
+GP.fval_true(end-i+1:end,:)=[];
+GP.delta(end-i+1:end,:)=[];
+GP.centre(end-i+1:end,:)=[];
