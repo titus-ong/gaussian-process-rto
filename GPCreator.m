@@ -231,8 +231,8 @@ classdef GPCreator  < matlab.mixin.Copyable
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
-                1-vec_len
-                if sum(obj.small_step(idx-2:idx))==2
+%                 1-vec_len
+                if sum(obj.small_step(idx-1:idx))==2
                     % Past 2 steps were small
                     bool = true;
                 elseif abs(1 - vec_len) < obj.align_tol
@@ -247,7 +247,7 @@ classdef GPCreator  < matlab.mixin.Copyable
         function excited = get_excited_points(obj, idx, direction_vec)
             % Get excited points given previous direction vector and
             % current centre
-            if sum(obj.small_step(idx-2:idx))==2
+            if sum(obj.small_step(idx-1:idx))==2
                 excited = obj.stationary(idx);
             else
                 excited = obj.straight_line(idx, direction_vec);
@@ -288,7 +288,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     if j == element_no
                         continue
                     end
-                    vec_ortho(j) = rand();
+                    vec_ortho(j) = rand()*2 - 1;  % Range [-1,1]
                     vec_magnitude = vec_magnitude + vec_ortho(j) * direction_vec(j);
                 end
                 last_element = -vec_magnitude / direction_vec(element_no);
@@ -354,7 +354,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 nonlin_con = @(x, par) obj.system.nonlin_con(x, par);
                 
                 % Excite or optimise
-                if obj.should_excite(i-1) && ~obj.excited(i-1)  % Avoid excitation if previous iter was excited
+                if obj.should_excite(i-1) && ~obj.excited(i-1) && ~obj.excited(i-2)  % Avoid excitation if either past two iter were excited
                     excited_point = obj.get_excited_points(i-1, obj.dir_vec);
                     if ~isnan(excited_point)
                         obj.fval_min(i) = func_obj(excited_point);
@@ -456,14 +456,22 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.fval_true(i) = obj.fval_true(i-1); 
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);  
-                    obj.excited(i) = false;                 
+%                     obj.excited(i) = false;  
+                elseif ~new_is_worse && obj.excited(i)
+                    % Excited point has better objective value
+                    obj.centre(i, :) = obj.opt_min(i, :);
+                    obj.delta(i, :) = obj.delta(i - 1, :);
+                    true_last = true_curr;
+                    obj.fval_true(i) = true_curr;
+                    obj.ineq_true(i, :) = ineq;
+                    obj.eq_true(i, :) = eq;            
                 elseif obj.rho(i) < obj.eta_low
                     obj.centre(i, :) = obj.centre(i - 1, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * obj.delta_reduction^(1-obj.excited(i));
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);
-                    obj.excited(i) = false;
+%                     obj.excited(i) = false;
                 elseif obj.rho(i) < obj.eta_high
                     obj.centre(i, :) = obj.opt_min(i, :);
                     obj.delta(i, :) = obj.delta(i - 1, :) * shrink;
@@ -485,7 +493,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                     obj.fval_true(i) = obj.fval_true(i-1);
                     obj.ineq_true(i, :) = obj.ineq_true(i-1, :);
                     obj.eq_true(i, :) = obj.eq_true(i-1, :);
-                    obj.excited(i) = false;
+%                     obj.excited(i) = false;
                 end
                 
                 % Check minimum and maximum trust region size
@@ -497,6 +505,12 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % Update values
                 pointer.update(obj.centre(i, :), obj.delta(i, :));
             end
+        end
+        
+        function rewind(obj, idx)
+            % Rewind GP back to iteration 'idx'
+            obj.model(end-idx+1:end) = [];
+%             GP.training_input = GP.model(end).objective.
         end
         
         function plot(obj)
@@ -526,6 +540,9 @@ classdef GPCreator  < matlab.mixin.Copyable
             end
             centres = plot(points(:, 1), points(:, 2), '-b*');
             training = scatter(obj.training_starter(:,1), obj.training_starter(:,2), '+m');
+            axes = fields(obj.system.feasible_point);
+            xlabel(join(split(axes{1}, '_'), ' '));
+            ylabel(join(split(axes{2}, '_'), ' '));
             legend([centres training], {'Centres', 'Training inputs'});
             
             % Plot excited points
