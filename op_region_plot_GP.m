@@ -1,7 +1,7 @@
 % Run example script first to get GP variable in workspace
 rows = 16;
 cols = 31;
-model_idx = 1;  % Which iteration of GP to display
+model_idx = 45;  % Which iteration of GP to display
 
 x1 = linspace(GP.lb(1), GP.ub(1), cols);
 x2 = linspace(GP.lb(2), GP.ub(2), rows);
@@ -45,7 +45,7 @@ for i = 1:length(temp_GP.system.constraints_eq)
     contour(x1, x2, val_eq.(temp_GP.system.constraints_eq{i}), [0, 0], 'm-');
 end
 
-% Plot last trust region
+% % Plot last trust region
 % syms x y a b h k
 % a = temp_GP.delta(model_idx, 1);
 % b = temp_GP.delta(model_idx, 2);
@@ -66,7 +66,7 @@ if sum(temp_GP.excited)
         end
         optimas = plot(temp_GP.opt_min(i-1:i+1, 1), temp_GP.opt_min(i-1:i+1, 2), '-ro');
     end
-    plot(temp_GP.opt_min(1:model_idx, 1), temp_GP.opt_min(1:model_idx, 2), ':k+');
+%     plot(temp_GP.opt_min(1:model_idx, 1), temp_GP.opt_min(1:model_idx, 2), ':k+');
     legend([centres training optimas], {'Centres', 'Training inputs', 'Excited points'});
 end
 
