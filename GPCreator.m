@@ -325,6 +325,39 @@ classdef GPCreator  < matlab.mixin.Copyable
             excited = nan;
         end
         
+        function [reduced_grad, grad] = reduced_grad_fn(obj, idx)
+            uk = obj.centre(idx, :);
+            [ineq, eq] = obj.model_con(uk);
+            active = [ineq eq] >= -obj.constraint_tol;
+            
+            for i = length(uk)
+                uk_p = uk;
+                uk_m = uk;
+                uk_p(i) = uk_p(i)*(1+sqrt(eps));
+                uk_m(i) = uk_m(i)*(1-sqrt(eps));
+                
+                obj_dp = obj.obj_fn(uk_p);
+                [ineq_dp, eq_dp] = obj.model_con(uk_p);
+                obj_dm = obj.obj_fn(uk_m);
+                [ineq_dm, eq_dm] = obj.model_con(uk_m);
+                
+                grad(i, 1) = (obj_dp - obj_dm)/(2*uk(i)*sqrt(eps));
+                grad_ineq(i, :) = (ineq_dp - ineq_dm)./(2*uk(i)*sqrt(eps));
+                grad_eq(i, :) = (eq_dp - eq_dm)./(2*uk(i)*sqrt(eps));
+            end
+            
+            if sum(active) >= 1
+                total_grad = [grad_ineq grad_eq];
+                grad_con_ac = total_grad(:, active==1);
+                V = null(grad_con_ac');
+            else
+                V = eye(length(ineq) + length(eq));
+            end
+            
+            reduced_grad = norm(grad'*V, 2);
+        end
+                
+        
         function optimise(obj, iter)
             % Pre-allocation
             cols = size(obj.centre, 2);
@@ -425,6 +458,14 @@ classdef GPCreator  < matlab.mixin.Copyable
                 % Predicted values
                 predicted_curr = obj.obj_fn(obj.opt_min(i, :));
                 predicted_last = obj.obj_fn(obj.centre(i-1, :));
+                
+%                 % Reduced gradient calculation
+%                 red_grad = obj.reduced_grad_fn(i-1);
+%                 op_range = [(obj.ub(1)-obj.lb(1)) (obj.ub(2)-obj.lb(2))];
+%                 curr_delta_factor = min(obj.delta(i-1, :) ./ op_range);
+%                 min_delta_factor = min(obj.min_TR * obj.delta(1, :) ./ op_range);
+%                 factor = max(min([red_grad curr_delta_factor]), min_delta_factor);
+%                 new_delta = factor * op_range;
                 
                 % Rho calculation
                 obj.rho(i) = ( ...
