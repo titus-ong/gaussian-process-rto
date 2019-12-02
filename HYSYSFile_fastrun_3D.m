@@ -67,8 +67,8 @@ classdef HYSYSFile_fastrun_3D  < matlab.mixin.Copyable
         linear_con_b = [];                         % Linear inequality constraints LHS
         lineq_con_A = [];                          % Linear equality constraints LHS
         lineq_con_b = [];                          % Linear equality constraints LHS
-        lb = [60000, 150, 40];                          % Lower bounds
-        ub = [200000, 1000, 300];                        % Upper bounds
+        lb = [60000, 200, 40];                          % Lower bounds
+        ub = [200000, 600, 120];                        % Upper bounds
         options = optimset('disp','off');          % Options for GP - iter or off
     
         min_TR = 0.4                               % Minimum trust region as percentage of original delta
@@ -78,7 +78,7 @@ classdef HYSYSFile_fastrun_3D  < matlab.mixin.Copyable
         delta_reduction = 0.8                      % Reduction in delta when Rho < eta_low
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
-        constraint_tol = 1e-3                      % Tolerance when system constraint is violated
+        constraint_tol = 5e-4                      % Tolerance when system constraint is violated
         align_tol = 1e-4                           % Tolerance of points being aligned for excitation
         region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation        
     end

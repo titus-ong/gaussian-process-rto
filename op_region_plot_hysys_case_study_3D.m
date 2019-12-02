@@ -3,7 +3,7 @@ rows = 8;  % No. of intervals of reboiler_duty
 cols = 9;  % No. of intervals of solvent flowrate
 heights = 9;
 
-% data_grid = readmatrix(pwd + excel);
+data_grid = readmatrix(pwd + excel);
 x1 = linspace(60000, 130000, cols);
 x2 = linspace(200, 600, rows);
 x3 = linspace(40, 120, heights);
@@ -22,15 +22,15 @@ m = mean(data_grid);
 sd = std(data_grid);
 X = (data_grid-m)./sd;
 X = X(:,1:3);
-obj_GP = fitrgp(X,data_grid(:,31));
-constraint_GP = fitrgp(X,data_grid(:,8));
+obj_GP = fitrgp(X,data_grid(:,31),'ConstantSigma',true,'Sigma',1e-10);
+constraint_GP = fitrgp(X,data_grid(:,8),'ConstantSigma',true,'Sigma',1e-10);
 rows = 20;
 cols = 20;
 heights = 20;
 
 x1 = linspace(60000, 130000, cols);
 x2 = linspace(200, 600, rows);
-x3 = linspace(60, 100, heights);
+x3 = linspace(40, 120, heights);
 
 x1 = (x1-mean(x1))./std(x1);
 x2 = (x2-mean(x2))./std(x2);
@@ -50,26 +50,29 @@ for i = 1:cols
     end
 end
 
+obj_withinconstraint = obj;
+
 for i = 1:cols
     for j = 1:rows
         for k = 1:heights
             if constraint(j, i, k) < 0.01
             else
-            obj(j, i, k) = NaN;
+            obj_withinconstraint(j, i, k) = NaN;
             end
         end
     end
 end
 
-[minM, idx] = min(obj(:));
-[n, m, t] = ind2sub(size(obj),idx);
-scatter3(n,m,t);
+sliceomatic(obj);
+sliceomatic(constraint);
 
+% thing=gca;
+% copyobj(thing.Children,paste);
 
+[~, idx] = min(obj_withinconstraint(:));
+[n, m, t] = ind2sub(size(obj_withinconstraint),idx);
+scatter3(n,m,t,40,'r','h');
 
-
-figure
-hold on;
 
 % xslice = [100000 120000];                               % define the cross sections to view
 % yslice = [500];
