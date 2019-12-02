@@ -39,7 +39,7 @@ classdef HYSYSFile_fastrun_3D  < matlab.mixin.Copyable
             'objective_true', 'A27' ...
             );
         feasible_point = struct( ...
-            "reboiler_duty", 80000, ...            
+            "reboiler_duty", 100000, ...            
             "solvent_flowrate", 450, ...
             "inlet_gas_flowrate", 50 ...            
             );
@@ -79,9 +79,8 @@ classdef HYSYSFile_fastrun_3D  < matlab.mixin.Copyable
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
-        excite_tol = 1e-2                          % Tolerance of points being aligned for excitation
         align_tol = 1e-4                           % Tolerance of points being aligned for excitation
-        region_tol = 1e-4                          % Tolerance (fraction of max TR) of points in same region for excitation        
+        region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation        
     end
     properties
         feasible_point_mat                         % Matrix form
