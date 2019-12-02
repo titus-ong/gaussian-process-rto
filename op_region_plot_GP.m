@@ -1,7 +1,7 @@
 % Run example script first to get GP variable in workspace
 rows = 16;
 cols = 31;
-model_idx = 16;  % Which iteration of GP to display
+model_idx = 1;  % Which iteration of GP to display
 
 x1 = linspace(GP.lb(1), GP.ub(1), cols);
 x2 = linspace(GP.lb(2), GP.ub(2), rows);
@@ -46,15 +46,15 @@ for i = 1:length(temp_GP.system.constraints_eq)
 end
 
 % Plot last trust region
-syms x y a b h k
-a = temp_GP.delta(model_idx, 1);
-b = temp_GP.delta(model_idx, 2);
-h = temp_GP.centre(model_idx, 1);
-k = temp_GP.centre(model_idx, 2);
-ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
-fimplicit(ellipse, [temp_GP.lb(1) temp_GP.ub(1) temp_GP.lb(2) temp_GP.ub(2)], '--b');
+% syms x y a b h k
+% a = temp_GP.delta(model_idx, 1);
+% b = temp_GP.delta(model_idx, 2);
+% h = temp_GP.centre(model_idx, 1);
+% k = temp_GP.centre(model_idx, 2);
+% ellipse = (((x-h)^2)/(a^2))+(((y-k)^2)/(b^2))==1;
+% fimplicit(ellipse, [temp_GP.lb(1) temp_GP.ub(1) temp_GP.lb(2) temp_GP.ub(2)], '--b');
 
-training = scatter(temp_GP.training_input(1:6,1), temp_GP.training_input(1:6,2), '+m');
+training = scatter(temp_GP.training_starter(:,1), temp_GP.training_starter(:,2), '+m');
 centres = plot(temp_GP.centre(1:model_idx, 1), temp_GP.centre(1:model_idx, 2), '-b*');
 legend([centres training], {'Centres', 'Training inputs'});
 
