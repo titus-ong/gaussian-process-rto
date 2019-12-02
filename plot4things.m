@@ -9,7 +9,7 @@ y_con = GP.ineq_true;
 x = size(GP.rho,1);
 x = linspace(0,x-1,x);
 %% 
-fig1 = figure(1);
+fig1 = figure();
 hold on
 
 yyaxis left
@@ -38,7 +38,7 @@ fig1_plot.YAxis(1).Color = 'k';
 fig1_plot.YAxis(2).Color = 'k';
 xlim([0 size(GP.rho,1)]-1)
 %%
-fig2 = figure(2);
+fig2 = figure();
 hold on
 
 yyaxis left
