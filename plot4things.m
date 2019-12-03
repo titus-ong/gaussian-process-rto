@@ -2,6 +2,9 @@ set(groot,'defaulttextinterpreter','latex');
 set(groot, 'defaultAxesTickLabelInterpreter','latex');  
 set(groot, 'defaultLegendInterpreter','latex');
 
+rho_limit = [0 2];
+rho_iteration_cut = 15;
+
 y_delta = GP.delta(:,1)/GP.delta(1,1);
 y_rho = GP.rho;
 y_obj = GP.fval_true;
@@ -13,8 +16,10 @@ fig1 = figure();
 hold on
 
 yyaxis left
-rho = plot(x,y_rho);
+rho = plot(x(1:rho_iteration_cut),y_rho(1:rho_iteration_cut));
+rho_unstable = plot(x(rho_iteration_cut:end),y_rho(rho_iteration_cut:end));
 ylabel('$\rho$','interpreter','latex')
+ylim(rho_limit)
 test = isnan(y_rho);
 for i=1:size(y_rho,1)
     if test(i) == 1
