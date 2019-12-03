@@ -3,7 +3,8 @@ set(groot, 'defaultAxesTickLabelInterpreter','latex');
 set(groot, 'defaultLegendInterpreter','latex');
 
 rho_limit = [0 2];
-rho_iteration_cut = 18;
+rho_iteration_cut = 16;
+obj_min = 0.56;
 
 y_delta = GP.delta(:,1)/GP.delta(1,1);
 y_rho = GP.rho;
@@ -11,6 +12,8 @@ y_obj = GP.fval_true;
 y_con = GP.ineq_true;
 rows = size(GP.rho,1);
 x = linspace(0,rows-1,rows);
+obj_min = ones(1,rows)*obj_min;
+zeroplot = zeros(1,rows);
 %% 
 fig1 = figure();
 hold on
@@ -41,7 +44,7 @@ xlabel('Iteration','interpreter','latex')
 fig1_plot = gca;
 fig1_plot.YAxis(1).Color = 'k';
 fig1_plot.YAxis(2).Color = 'k';
-xlim([0 rows]-1)
+xlim([0 rows-1])
 %%
 fig2 = figure();
 hold on
@@ -49,14 +52,16 @@ hold on
 yyaxis left
 plot(x,y_obj);
 ylabel('$G_{0}$','interpreter','latex')
+plot(x,obj_min);
 
 yyaxis right
 plot(x,y_con);
 ylabel('$G_{1}$','interpreter','latex')
+plot(x,zeroplot);
 
 legend('$G_{0}$', '$G{1}$')
 xlabel('Iteration')
 fig2_plot = gca;
 fig2_plot.YAxis(1).Color = 'k';
 fig2_plot.YAxis(2).Color = 'k';
-xlim([0 rows]-1)
+xlim([0 rows-1])
