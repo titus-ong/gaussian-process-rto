@@ -3,8 +3,8 @@ set(groot, 'defaultAxesTickLabelInterpreter','latex');
 set(groot, 'defaultLegendInterpreter','latex');
 
 rho_limit = [0 2];
-rho_iteration_cut = 16;
-obj_min = 0.56;
+rho_iteration_cut = 21;
+obj_min = 0.122;
 
 y_delta = GP.delta(:,1)/GP.delta(1,1);
 y_rho = GP.rho;
@@ -50,16 +50,16 @@ fig2 = figure();
 hold on
 
 yyaxis left
-plot(x,y_obj);
+G0 = plot(x,y_obj);
 ylabel('$G_{0}$','interpreter','latex')
 plot(x,obj_min);
 
 yyaxis right
-plot(x,y_con);
+G1 = plot(x,y_con);
 ylabel('$G_{1}$','interpreter','latex')
 plot(x,zeroplot);
 
-legend('$G_{0}$', '$G{1}$')
+legend([G0, G1], {'$G_{0}$', '$G{1}$'})
 xlabel('Iteration')
 fig2_plot = gca;
 fig2_plot.YAxis(1).Color = 'k';
