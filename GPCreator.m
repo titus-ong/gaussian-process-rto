@@ -231,7 +231,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
-%                 1-vec_len
+                1-vec_len
                 if sum(obj.small_step(idx-1:idx))==2
                     % Past 2 steps were small
                     bool = true;
@@ -397,7 +397,7 @@ classdef GPCreator  < matlab.mixin.Copyable
                 end
                 if ~logical(obj.fval_min(i))
                     % Optimise from various starting points
-                    starting_pts = pointer.random_sampling(3);
+                    starting_pts = pointer.random_sampling(4);
                     dim = size(starting_pts);
                     opt_points = zeros(dim(1), dim(2));
                     fvals = zeros(dim(1), 1);
@@ -548,10 +548,25 @@ classdef GPCreator  < matlab.mixin.Copyable
             end
         end
         
-        function rewind(obj, idx)
-            % Rewind GP back to iteration 'idx'
-            obj.model(end-idx+1:end) = [];
-%             GP.training_input = GP.model(end).objective.
+        function rewind(obj, i)
+            % Rewind GP back to iteration 'i'
+            obj.model(i+1:end)=[];
+            training_no = sum(isnan(obj.rho(1:i))) + sum(obj.small_step(1:i)) - size(obj.training_starter, 1) + 1;
+            obj.training_input(i+1-training_no:end, :) = [];
+            obj.training_output.objective(i+1-training_no:end, :) = [];
+            obj.training_output.con_ineq(i+1-training_no:end, :) = [];
+            obj.training_output.con_eq(i+1-training_no:end, :) = [];
+            obj.values_adj(i+1:end) = [];
+            obj.centre(i+1:end, :)=[];
+            obj.delta(i+1:end, :)=[];
+            obj.fval_true(i+1:end, :)=[];
+            obj.ineq_true(i+1:end, :)=[];
+            obj.eq_true(i+1:end, :)=[];
+            obj.fval_min(i+1:end, :)=[];
+            obj.opt_min(i+1:end, :)=[];
+            obj.rho(i+1:end, :)=[];
+            obj.excited(i+1:end, :)=[];
+            obj.small_step(i+1:end, :)=[];
         end
         
         function plot(obj)
