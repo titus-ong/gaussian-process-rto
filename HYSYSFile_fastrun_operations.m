@@ -74,7 +74,8 @@ classdef HYSYSFile_fastrun_operations  < matlab.mixin.Copyable
         delta_expansion = 1.2                      % Expansion in delta when Rho > eta_high
         forgetting_factor = 1.5                    % Allowance for inaccuracies in GP due to outdated data
         constraint_tol = 1e-3                      % Tolerance when system constraint is violated
-        excite_tol = 1e-2                          % Tolerance of points being aligned for excitation
+        region_tol = 1e-2                          % Tolerance (fraction of max TR) of points in same region for excitation
+        align_tol = 5e-7                           % Tolerance of points being aligned for excitation
     end
     properties
         feasible_point_mat                         % Matrix form
