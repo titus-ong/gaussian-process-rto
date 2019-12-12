@@ -1,7 +1,9 @@
 %% User name variables
-hysys_name = "\fast run - operations.hsc";
+hysys_name = "\System Files\fast run - operations.hsc";
 spreadsheet_input = "Inputs";
 spreadsheet_output = "Outputs";
+addpath 'System Files'\
+addpath 'System Files\Operating region plots'\
 
 %% Connect to HYSYS
 tic

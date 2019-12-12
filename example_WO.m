@@ -1,6 +1,8 @@
 %% Load Williams-Otto
 tic
 WO = WilliamsOtto();
+addpath 'System Files'\
+addpath 'System Files\Operating region plots'\
 % WO.decay = true;  % Set to see effect of decay on optimisation
 
 %% Initialising Points for Training
