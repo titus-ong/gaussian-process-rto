@@ -231,7 +231,6 @@ classdef GPCreator  < matlab.mixin.Copyable
                 grad_curr = obj.centre(idx, :) - obj.centre(idx - 1, :);
                 unit_curr = grad_curr ./ norm(grad_curr);
                 vec_len = dot(unit_prev, unit_curr);
-                1-vec_len
                 if sum(obj.small_step(idx-1:idx))==2
                     % Past 2 steps were small
                     bool = true;
