@@ -1,7 +1,9 @@
 %% User name variables
-hysys_name = "\case study - 3D.hsc";
+hysys_name = "\System Files\case study - 3D.hsc";
 spreadsheet_input = "Inputs";
 spreadsheet_output = "Outputs";
+addpath 'System Files'\
+addpath 'System Files\Operating region plots'\
 
 %% Connect to HYSYS
 tic
