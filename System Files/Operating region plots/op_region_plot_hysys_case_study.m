@@ -1,4 +1,4 @@
-excel = "\case study 80(10%) run2.xlsx";
+excel = "\System Files\Operating region plots\case study 80(10%) run2.xlsx";
 rows = 15;  % No. of intervals of reboiler_duty
 cols = 17;  % No. of intervals of solvent flowrate
 

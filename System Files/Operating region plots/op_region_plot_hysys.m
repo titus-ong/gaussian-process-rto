@@ -1,4 +1,4 @@
-excel = "\fast run results rerun (with pump flowrates).xlsx";
+excel = "\System Files\Operating region plots\fast run results rerun (with pump flowrates).xlsx";
 rows = 21;  % No. of intervals of reboiler_duty
 cols = 21;  % No. of intervals of sour_gas
 

@@ -1,4 +1,4 @@
-excel = "\case study 3D run2.xlsx";
+excel = "\System Files\Operating region plots\case study 3D run2.xlsx";
 rows = 8;  % No. of intervals of reboiler_duty
 cols = 9;  % No. of intervals of solvent flowrate
 heights = 9;
